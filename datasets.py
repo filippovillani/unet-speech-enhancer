@@ -6,6 +6,8 @@ import pandas as pd
 import tensorflow as tf
 
 
+# TODO: Write the documenation for the functions
+
 def build_noisy_speech_df(data_dir: str)->pd.DataFrame:
     # Loading the dataframe containing information about UrbanSound8K
     urban_metadata_path = os.path.join(data_dir, 'UrbanSound8K.csv')
@@ -143,16 +145,6 @@ def spectrogram(noisy_speech, clean_speech, sr=16000, n_mels=96, n_fft=1024, hop
 
     return noisy_spec, clean_spec
 
-# This function is not used in the data input pipeline but it is useful to retrieve the waveform from a spectrogram.
-def waveform_from_spectrogram(spectrogram, sr=16000, n_fft=1024, hop_len=259, n_iter=512):
-    spectrogram = (spectrogram - 1.) * 80.
-    inverse_spectrogram = librosa.feature.inverse.mel_to_audio(librosa.db_to_power(spectrogram), 
-                                                               sr = sr, 
-                                                               n_fft = n_fft, 
-                                                               hop_length = hop_len, 
-                                                               n_iter = n_iter)
-
-    return inverse_spectrogram
 
 def prepare_enhancement_ds(ds, batch_size, train=False):
   if train:
