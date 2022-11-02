@@ -5,10 +5,26 @@ import librosa.display
 import pandas as pd
 import tensorflow as tf
 
+from utils import signal_power, spectrogram
 
-# TODO: Write the documenation for the functions
 
-def build_noisy_speech_df(data_dir: str)->pd.DataFrame:
+def build_noisy_speech_df(data_dir: str):
+    """
+    Builds a pd.DataFrame that contains the paths to the noise and speech
+    audio files, along with the noise classID.
+    
+    Parameters
+    ----------
+    data_dir : str
+        The directory in which the data are stored
+
+    Returns
+    -------
+    noisy_speech_df : pd.DataFrame
+        Dataframe containing noise_path, speech_path, classID
+
+    """
+    
     # Loading the dataframe containing information about UrbanSound8K
     urban_metadata_path = os.path.join(data_dir, 'UrbanSound8K.csv')
     urban_df = pd.read_csv(urban_metadata_path)
@@ -20,8 +36,6 @@ def build_noisy_speech_df(data_dir: str)->pd.DataFrame:
     timit_metadata_path = os.path.join(data_dir, 'train_data.csv')
     timit_audio_dir = os.path.join(data_dir, 'data/')
     timit_df = pd.read_csv(timit_metadata_path)
-    # timit_df = timit_df.rename(columns={"path_from_data_dir": "speech_path"})
-    # I am just interested in the audio, I am dropping all the other files 
     timit_df = timit_df.loc[timit_df['is_audio']==True].loc[timit_df['is_converted_audio']==True]
     # Dropping all the columns but speech_path
     timit_df['speech_path'] = timit_audio_dir + timit_df['path_from_data_dir'].astype(str)
@@ -52,12 +66,41 @@ def build_noisy_speech_df(data_dir: str)->pd.DataFrame:
     return noisy_speech_df
 
 
-# These are the functions that preprocess the audio files. I'm going to use them to prepare the dataset.
-def signal_power(signal):
-    power = np.mean((np.abs(signal))**2)
-    return power
 
-def generate_noisy_speech(speech, noise, sr=16000, min_noise_ms=1000, audio_ms=4000, seed=None):
+def generate_noisy_speech(speech: np.ndarray, 
+                          noise: np.ndarray, 
+                          sr: int = 16000, 
+                          min_noise_ms: int = 1000, 
+                          audio_ms: int = 4000, 
+                          seed = None):
+    """
+    Blends environmental noise from UrbanSound8K with utterances from TIMIT.
+    The noise power for each sample is a uniform random variable with values in [-5, 5] dB.
+    
+
+    Parameters
+    ----------
+    speech : TYPE
+        DESCRIPTION.
+    noise : TYPE
+        DESCRIPTION.
+    sr : int
+        Sample rate. The default is 16000Hz.
+    min_noise_ms : int
+        Minimum duration of noise audio. If the audio duration is below this threshold then it will be
+        duplicated in the mixed audio. The default is 1000ms.
+    audio_ms : int
+        Mixed audio duration. The default is 4000ms.
+
+    Returns
+    -------
+    noisy_speech: np.ndarray
+        Mixture of speech and noise.
+    speech : np.ndarray
+        Clean speech.
+
+    """
+    
     np.random.seed(seed)
     
     SNR_premix = signal_power(speech) / signal_power(noise)
@@ -114,7 +157,33 @@ def generate_noisy_speech(speech, noise, sr=16000, min_noise_ms=1000, audio_ms=4
     return (speech + noise_coefficient * noise), speech
 
 
-def open_audio(noise_file, speech_file, mono=True, sr=16000):
+def open_audio(noise_file: tf.Tensor, 
+               speech_file: tf.Tensor, 
+               mono: bool = True, 
+               sr: int = 16000):
+    """
+    
+    This is used as a tf.py_function to open the audio files
+    Parameters
+    ----------
+    noise_file : tf.Tensor
+        Noise audio path as tf.Tensor
+    speech_file : tf.Tensor
+        Speech audio path as tf.Tensor.
+    mono : bool
+        Specifies whether the audio is mono or stereo. The default is True.
+    sr : int
+        Sample rate. The default is 16000.
+
+    Returns
+    -------
+    noisy_speech : np.ndarray
+        Mixture of speech and noise.
+    speech : np.ndarray
+        Clean speech.
+
+    """
+    
     seed = np.random.randint(10000)
     speech, _ = librosa.load(speech_file.numpy(), mono=mono, sr=sr)
     noise, _ = librosa.load(noise_file.numpy(), mono=mono, sr=sr)
@@ -127,45 +196,68 @@ def open_audio(noise_file, speech_file, mono=True, sr=16000):
 
     return noisy_speech, speech
 
-def spectrogram(noisy_speech, clean_speech, sr=16000, n_mels=96, n_fft=1024, hop_len=259):
-    noisy_spec = librosa.power_to_db(librosa.feature.melspectrogram(noisy_speech.numpy(), 
-                                                                    sr = sr, 
-                                                                    n_fft = n_fft, 
-                                                                    hop_length = hop_len,
-                                                                    n_mels = n_mels), ref=np.max, top_db=80.) / 80. + 1.
-                                                            
-    clean_spec = librosa.power_to_db(librosa.feature.melspectrogram(clean_speech.numpy(),
-                                                                    sr = sr, 
-                                                                    n_fft = n_fft, 
-                                                                    hop_length = hop_len,
-                                                                    n_mels = n_mels), ref=np.max, top_db=80.) / 80. + 1.
+
+def prepare_enhancement_ds(ds: tf.data.Dataset, 
+                           batch_size: int, 
+                           train: bool = False):
+    """
+    Prepares the dataset for the NN
+
+    Parameters
+    ----------
+
+    train : bool, optional
+        Specifies if the dataset is used as training set. The default is False.
+
+    Returns
+    -------
+    ds : tf.data.Dataset
+        The dataset ready to be fed to the NN.
+
+    """
     
-    noisy_spec = tf.expand_dims(tf.convert_to_tensor(noisy_spec), axis=-1)
-    clean_spec = tf.expand_dims(tf.convert_to_tensor(clean_spec), axis=-1)
+    if train:
+      ds = ds.shuffle(len(ds))
+  
+    ds = ds.map(lambda noise, speech: tf.py_function(open_audio, 
+                                                     [noise, speech], 
+                                                     [tf.float32, tf.float32]), 
+                num_parallel_calls=tf.data.experimental.AUTOTUNE)
+    ds = ds.map(lambda noisy_speech, clean_speech: tf.py_function(spectrogram, 
+                                                                  [noisy_speech, clean_speech], 
+                                                                  [tf.float32, tf.float32]), 
+                num_parallel_calls=tf.data.experimental.AUTOTUNE)
+  
+    ds = ds.cache()
+  
+    ds = ds.batch(batch_size)
+    ds = ds.prefetch(tf.data.experimental.AUTOTUNE)
+    return ds
 
-    return noisy_spec, clean_spec
+def build_dataset(data_dir: str, 
+                  batch_size: int):
+    """
+    Firstly, it builds the Dataframe that contains the audio files path, 
+    then the dataset split into training, validation and test sets.
 
+    Parameters
+    ----------
+    data_dir : str
+        The directory in which the data are stored
 
-def prepare_enhancement_ds(ds, batch_size, train=False):
-  if train:
-    ds = ds.shuffle(len(ds))
+    Returns
+    -------
+    train_ds : tf.data.Dataset
+        Training set.
+    val_ds : tf.data.Dataset
+        Validation set.
+    test_ds : tf.data.Dataset
+        Test set.
 
-  ds = ds.map(lambda noise, speech: tf.py_function(open_audio, 
-                                                   [noise, speech], 
-                                                   [tf.float32, tf.float32]), 
-              num_parallel_calls=tf.data.experimental.AUTOTUNE)
-  ds = ds.map(lambda noisy_speech, clean_speech: tf.py_function(spectrogram, 
-                                                                [noisy_speech, clean_speech], 
-                                                                [tf.float32, tf.float32]), 
-              num_parallel_calls=tf.data.experimental.AUTOTUNE)
-
-  ds = ds.cache()
-
-  ds = ds.batch(batch_size)
-  ds = ds.prefetch(tf.data.experimental.AUTOTUNE)
-  return ds
-
-def build_ds_from_df(df, batch_size):
+    """
+    
+    df = build_noisy_speech_df(data_dir)
+    
     df_len = len(df)
     train_len = int(0.8 * df_len)
     val_len = int(0.1 * df_len)

@@ -19,7 +19,6 @@ class SI_NSR_loss(tf.keras.losses.Loss):
         
         return SI_NSR
 
-#####################################################################################
 # SI-SNR metric
 def create_snr_metric():
     def snr_metric(clean_speech, enhanced_speech):

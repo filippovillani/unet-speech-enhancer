@@ -1,7 +1,7 @@
 import tensorflow as tf
 import os
 
-from datasets import build_noisy_speech_df, build_ds_from_df
+from datasets import build_dataset
 from model import unet
 from metrics import SI_NSR_loss, SI_SNR
 
@@ -11,18 +11,12 @@ n_mels = 96
 main_dir = os.path.realpath(os.path.join(os.path.dirname('__file__')))
 data_main_dir = os.path.join(main_dir, 'data')
 
-noisy_speech_df = build_noisy_speech_df(data_main_dir)
-train_ds, val_ds, test_ds = build_ds_from_df(noisy_speech_df, batch_size=batch_size)
+train_ds, val_ds, test_ds = build_dataset(data_main_dir, batch_size)
 
-for el in test_ds:
-    noisy_example, clean_example = tf.squeeze(el[0][0]).numpy(), tf.squeeze(el[1][0]).numpy()
-    print('noisy: ', noisy_example.shape, noisy_example.dtype)
-    print('clean: ', clean_example.shape, clean_example.dtype)
-    break
 
 loss_fn = SI_NSR_loss()
 snr_metric = SI_SNR()
-#%%
+
 enhancer = unet((n_mels, 248, 1))
 opt = tf.keras.optimizers.Adam(learning_rate=0.0001)
 
