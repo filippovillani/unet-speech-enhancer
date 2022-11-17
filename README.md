@@ -10,9 +10,5 @@ In order to simulate such a scenario, I decided to mix speech audio from [DARPA 
 ## Generating noisy data
 The clean speeches are mixed with the noise keeping the Signal to Noise Ratio in a range of [-5, +5] dB. <br/>
 This is the implementation of the whole mixing and enhancement process:
+![generating_noisy_data](https://user-images.githubusercontent.com/93431189/199627651-7c40cd3f-a464-49fe-8e13-8bb205eeafa9.png)
 
-<<<<<<< HEAD
-![generating_noisy_data](https://user-images.githubusercontent.com/93431189/199627651-7c40cd3f-a464-49fe-8e13-8bb205eeafa9.png)
-=======
-![generating_noisy_data](https://user-images.githubusercontent.com/93431189/199627651-7c40cd3f-a464-49fe-8e13-8bb205eeafa9.png)
->>>>>>> 227be995b89de63604cfeff1d46adcb64996ef19
