@@ -1,5 +1,4 @@
 import numpy as np
-import os
 import librosa
 import librosa.display
 import pandas as pd
@@ -7,7 +6,7 @@ import tensorflow as tf
 
 from utils import signal_power, spectrogram
 
-
+# TODO: implement seeds
 def build_noisy_speech_df(data_dir: str):
     """
     Builds a pd.DataFrame that contains the paths to the noise and speech
@@ -21,43 +20,46 @@ def build_noisy_speech_df(data_dir: str):
     Returns
     -------
     noisy_speech_df : pd.DataFrame
-        Dataframe containing noise_path, speech_path, classID
+        'noise_path': str, 'speech_path': str, 'classID': int
 
     """
     
+    seed = 42
+    
     # Loading the dataframe containing information about UrbanSound8K
-    urban_metadata_path = os.path.join(data_dir, 'UrbanSound8K.csv')
+    urban_metadata_path = data_dir / 'UrbanSound8K.csv'
     urban_df = pd.read_csv(urban_metadata_path)
     # Save the file paths in a new column of the dataframe
-    urban_df['noise_path'] = data_dir + '/fold'  + urban_df['fold'].astype(str) + '/' + urban_df['slice_file_name'].astype(str)
+    urban_df['noise_path'] = data_dir / ('fold'  + urban_df['fold'].astype(str)) / urban_df['slice_file_name'].astype(str)
     # Keep just the useful columns
+    urban_df['noise_path'] = urban_df['noise_path'].astype(str)
     urban_df = urban_df[['noise_path', 'classID']]
 
-    timit_metadata_path = os.path.join(data_dir, 'train_data.csv')
-    timit_audio_dir = os.path.join(data_dir, 'data/')
+    timit_metadata_path = data_dir / 'train_data.csv'
+    timit_audio_dir = data_dir / 'data'
     timit_df = pd.read_csv(timit_metadata_path)
     timit_df = timit_df.loc[timit_df['is_audio']==True].loc[timit_df['is_converted_audio']==True]
     # Dropping all the columns but speech_path
-    timit_df['speech_path'] = timit_audio_dir + timit_df['path_from_data_dir'].astype(str)
-    timit_df = timit_df['speech_path']
-    timit_df = timit_df.sample(frac=1.)
+    timit_df['speech_path'] = timit_audio_dir / timit_df['path_from_data_dir'].astype(str)
+    timit_df = timit_df['speech_path'].astype(str)
+    timit_df = timit_df.sample(frac=1., random_state=seed)
     timit_df = timit_df.reset_index(drop=True)
     
     num_classes = 10
     num_instances_per_class = int(len(timit_df) / num_classes)
 
-    urban_df_reduced = urban_df[urban_df['classID']==0].sample(num_instances_per_class)
+    urban_df_reduced = urban_df[urban_df['classID']==0].sample(num_instances_per_class, random_state=seed)
 
     for class_num in range(1, num_classes):
         class_instances = len(urban_df.loc[urban_df['classID']==class_num])
         if (class_instances < num_instances_per_class):
-            urban_df_reduced = pd.concat([urban_df_reduced, urban_df[urban_df['classID']==class_num].sample(class_instances)])
-            urban_df_reduced = pd.concat([urban_df_reduced, urban_df[urban_df['classID']==class_num].sample(num_instances_per_class - class_instances)])
+            urban_df_reduced = pd.concat([urban_df_reduced, urban_df[urban_df['classID']==class_num].sample(class_instances, random_state=seed)])
+            urban_df_reduced = pd.concat([urban_df_reduced, urban_df[urban_df['classID']==class_num].sample(num_instances_per_class - class_instances, random_state=seed)])
         else:
-            urban_df_reduced = pd.concat([urban_df_reduced, urban_df[urban_df['classID']==class_num].sample(num_instances_per_class)])
+            urban_df_reduced = pd.concat([urban_df_reduced, urban_df[urban_df['classID']==class_num].sample(num_instances_per_class, random_state=seed)])
 
     # Shuffle the data and reset the indices
-    urban_df_reduced = urban_df_reduced.sample(frac=1).reset_index(drop=True)
+    urban_df_reduced = urban_df_reduced.sample(frac=1, random_state=seed).reset_index(drop=True)
 
     noisy_speech_df =  urban_df_reduced.join(timit_df)
 
@@ -234,7 +236,7 @@ def prepare_enhancement_ds(ds: tf.data.Dataset,
     ds = ds.prefetch(tf.data.experimental.AUTOTUNE)
     return ds
 
-def build_dataset(data_dir: str, 
+def build_datasets(data_dir: str, 
                   batch_size: int):
     """
     Firstly, it builds the Dataframe that contains the audio files path, 
@@ -267,8 +269,8 @@ def build_dataset(data_dir: str,
     test_df = df.iloc[train_len + val_len:].reset_index(drop=True)
 
 
-    train_ds = tf.data.Dataset.from_tensor_slices((train_df['noise_path'], 
-                                                   train_df['speech_path']))
+    train_ds = tf.data.Dataset.from_tensor_slices((train_df['noise_path'],
+                                                  train_df['speech_path']))
     train_ds = prepare_enhancement_ds(train_ds, batch_size=batch_size, train=True)
 
     val_ds = tf.data.Dataset.from_tensor_slices((val_df['noise_path'], 

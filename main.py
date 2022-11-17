@@ -1,17 +1,20 @@
-import tensorflow as tf
-import os
+from pathlib import Path
 
-from datasets import build_dataset
+import tensorflow as tf
+
+from datasets import build_datasets
 from model import unet
 from metrics import SI_NSR_loss, SI_SNR
 
+
 batch_size = 16
 n_mels = 96
+epochs = 30
 
-main_dir = os.path.realpath(os.path.join(os.path.dirname('__file__')))
-data_main_dir = os.path.join(main_dir, 'data')
+main_dir = Path(__file__).parent
+data_main_dir = main_dir / "data"
 
-train_ds, val_ds, test_ds = build_dataset(data_main_dir, batch_size)
+train_ds, val_ds, test_ds = build_datasets(data_main_dir, batch_size)
 
 
 loss_fn = SI_NSR_loss()
@@ -27,5 +30,5 @@ callbacks_list = [tf.keras.callbacks.EarlyStopping(monitor='val_loss', patience=
 
 entire_dataset_history = enhancer.fit(train_ds, 
                                       validation_data=val_ds, 
-                                      epochs=30, 
+                                      epochs=epochs, 
                                       callbacks=callbacks_list)

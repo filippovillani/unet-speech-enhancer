@@ -29,13 +29,14 @@ def spectrogram(noisy_speech: tf.Tensor,
                 hop_len: int = 259):
     """
     Computes the mel spectrogram of the noisy and the clean speech audio.
+    It is used as a tf.py_function in datasets.prepare_enhancement_ds
 
     Parameters
     ----------
     noisy_speech : tf.Tensor
-        DESCRIPTION.
+        The mixture of noise and speech.
     clean_speech : tf.Tensor
-        DESCRIPTION.
+        The clean speech signal.
     sr : int, optional
         Sample Rate. The default is 16000.
     n_mels : int, optional
