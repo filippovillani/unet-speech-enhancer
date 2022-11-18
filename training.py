@@ -9,14 +9,9 @@ from tqdm import tqdm
 from datasets import build_datasets
 from model import UNet
 from metrics import SI_NSR_loss, SI_SNR
+import config
 
-'''
-train_config:
-    - batch_size V
-    - epochs    V
-    - patience  V
-    - lr        V
-'''
+
 def eval_model(model, 
                test_set,
                metric,
@@ -43,38 +38,29 @@ def eval_model(model,
         return score
         
 
-def train_model(train_config,
-                data_dir: str,
+def train_model(args,
                 experiment_name: str = "unet0",
-                model_weights_path: str = None):
+                weights_path: str = None):
     
+    # Initialize model, optimizer, loss_fn and metric
     model = UNet()
-    optimizer = tf.keras.optimizers.Adam(learning_rate=train_config.lr)
+    optimizer = tf.keras.optimizers.Adam(learning_rate=args.lr)
     loss_fn = SI_NSR_loss()
     metric = SI_SNR()
+    # Build training and validation 
+    train_ds, val_ds, _ = build_datasets(config.DATA_DIR, args.batch_size)
     
-    train_ds, val_ds, _ = build_datasets(data_dir, train_config.batch_size)
+    training_state_path = config.TRAINING_STATE_DIR / (experiment_name+".json")
     
-    # Make directories
-    model_weights_dir = data_dir.parent / 'checkpoint'
-    if not os.path.exists(model_weights_dir):
-        os.mkdir(model_weights_dir)
-    
-    training_state_dir = data_dir.parent / 'training_states'
-    if not os.path.exists(training_state_dir):
-        os.mkdir(training_state_dir)
-    
-    training_state_path = training_state_dir / (experiment_name+".json")
-    
-    if model_weights_path is not None:
-        model_weights_path = model_weights_dir / model_weights_path
-        model.load_weights(model_weights_path)
+    if weights_path is not None:
+        weights_path = config.WEIGHTS_DIR / weights_path
+        model.load_weights(weights_path)
         
         with open(training_state_path, "r") as fr:
             training_state = json.load(fr)
          
     else:
-        model_weights_path = model_weights_dir / experiment_name
+        weights_path = config.WEIGHTS_DIR / experiment_name
         training_state = {"epochs": 1,
                           "patience_epochs": 0,  
                           "best_val_loss": np.Inf,
@@ -127,7 +113,7 @@ def train_model(train_config,
             training_state["best_epoch"] = training_state["epochs"]
             print("SI-SNR on validation set improved\n")
             # Save the best model
-            model.save_weights(model_weights_path)
+            model.save_weights(weights_path)
             
         training_state["epochs"] += 1 
         

@@ -5,17 +5,13 @@ import pandas as pd
 import tensorflow as tf
 
 from utils import signal_power, spectrogram
+import config
 
 # TODO: implement seeds
-def build_noisy_speech_df(data_dir: str):
+def build_noisy_speech_df():
     """
     Builds a pd.DataFrame that contains the paths to the noise and speech
     audio files, along with the noise classID.
-    
-    Parameters
-    ----------
-    data_dir : str
-        The directory in which the data are stored
 
     Returns
     -------
@@ -27,16 +23,16 @@ def build_noisy_speech_df(data_dir: str):
     seed = 42
     
     # Loading the dataframe containing information about UrbanSound8K
-    urban_metadata_path = data_dir / 'UrbanSound8K.csv'
+    urban_metadata_path = config.DATA_DIR / 'UrbanSound8K.csv'
     urban_df = pd.read_csv(urban_metadata_path)
     # Save the file paths in a new column of the dataframe
-    urban_df['noise_path'] = data_dir / ('fold'  + urban_df['fold'].astype(str)) / urban_df['slice_file_name'].astype(str)
+    urban_df['noise_path'] = config.DATA_DIR / ('fold'  + urban_df['fold'].astype(str)) / urban_df['slice_file_name'].astype(str)
     # Keep just the useful columns
     urban_df['noise_path'] = urban_df['noise_path'].astype(str)
     urban_df = urban_df[['noise_path', 'classID']]
 
-    timit_metadata_path = data_dir / 'train_data.csv'
-    timit_audio_dir = data_dir / 'data'
+    timit_metadata_path = config.DATA_DIR / 'train_data.csv'
+    timit_audio_dir = config.DATA_DIR / 'data'
     timit_df = pd.read_csv(timit_metadata_path)
     timit_df = timit_df.loc[timit_df['is_audio']==True].loc[timit_df['is_converted_audio']==True]
     # Dropping all the columns but speech_path
@@ -236,16 +232,10 @@ def prepare_enhancement_ds(ds: tf.data.Dataset,
     ds = ds.prefetch(tf.data.experimental.AUTOTUNE)
     return ds
 
-def build_datasets(data_dir: str, 
-                  batch_size: int):
+def build_datasets(batch_size: int):
     """
     Firstly, it builds the Dataframe that contains the audio files path, 
     then the dataset split into training, validation and test sets.
-
-    Parameters
-    ----------
-    data_dir : str
-        The directory in which the data are stored
 
     Returns
     -------
@@ -258,7 +248,7 @@ def build_datasets(data_dir: str,
 
     """
     
-    df = build_noisy_speech_df(data_dir)
+    df = build_noisy_speech_df(config.DATA_DIR)
     
     df_len = len(df)
     train_len = int(0.8 * df_len)
