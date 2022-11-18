@@ -4,7 +4,8 @@ import librosa.display
 import pandas as pd
 import tensorflow as tf
 
-from utils import signal_power, spectrogram
+from utils import signal_power
+from tf_utils import spectrogram, open_audio
 import config
 
 # TODO: implement seeds
@@ -78,10 +79,10 @@ def generate_noisy_speech(speech: np.ndarray,
 
     Parameters
     ----------
-    speech : TYPE
-        DESCRIPTION.
-    noise : TYPE
-        DESCRIPTION.
+    speech : np.ndarray
+        clean speech signal
+    noise : np.ndarray
+        noise signal
     sr : int
         Sample rate. The default is 16000Hz.
     min_noise_ms : int
@@ -155,44 +156,7 @@ def generate_noisy_speech(speech: np.ndarray,
     return (speech + noise_coefficient * noise), speech
 
 
-def open_audio(noise_file: tf.Tensor, 
-               speech_file: tf.Tensor, 
-               mono: bool = True, 
-               sr: int = 16000):
-    """
-    
-    This is used as a tf.py_function to open the audio files
-    Parameters
-    ----------
-    noise_file : tf.Tensor
-        Noise audio path as tf.Tensor
-    speech_file : tf.Tensor
-        Speech audio path as tf.Tensor.
-    mono : bool
-        Specifies whether the audio is mono or stereo. The default is True.
-    sr : int
-        Sample rate. The default is 16000.
 
-    Returns
-    -------
-    noisy_speech : np.ndarray
-        Mixture of speech and noise.
-    speech : np.ndarray
-        Clean speech.
-
-    """
-    
-    seed = np.random.randint(10000)
-    speech, _ = librosa.load(speech_file.numpy(), mono=mono, sr=sr)
-    noise, _ = librosa.load(noise_file.numpy(), mono=mono, sr=sr)
-    
-    noisy_speech, speech = generate_noisy_speech(speech, noise, sr=sr, seed=seed)
-    
-    # Zero mean, unitary variance normalization
-    speech = (speech - speech.mean()) / speech.std()
-    noisy_speech = (noisy_speech - noisy_speech.mean()) / noisy_speech.std()
-
-    return noisy_speech, speech
 
 
 def prepare_enhancement_ds(ds: tf.data.Dataset, 

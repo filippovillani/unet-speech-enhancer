@@ -98,7 +98,11 @@ def parse_args():
                                      help='Use the model for prediction')
     parser_predict.add_argument('--weights_path', 
                                 type=str, 
-                                help='help for b')
+                                help='Path of model_weights.h5f')
+    parser_predict.add_argument('--audio_path',
+                                type=str,
+                                help='Relative path to .wav audio in mixture_example folder',
+                                default='download.wav')
     
     # parser.add_argument('-a', 
     #                     type=int,
