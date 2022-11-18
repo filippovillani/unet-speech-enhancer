@@ -65,7 +65,7 @@ def parse_args():
     
     parser = argparse.ArgumentParser(description='U-Net Speech Enhancer',
                                      epilog='I hope it sounds good')
-    subparsers = parser.add_subparsers(help='help for subcommand', dest="subcommand")
+    subparsers = parser.add_subparsers(help='Help for subcommand', dest="subcommand")
     
     # Train commands
     parser_train = subparsers.add_parser('train', help='Train the model')
@@ -75,7 +75,8 @@ def parse_args():
                               default='unet0')
     parser_train.add_argument('--weights_path', 
                               type=str, 
-                              help='If you want to restart the training, specify the weigths location')
+                              help='If you want to restart the training, specify the weigths location',
+                              default=None)
     parser_train.add_argument('--batch_size', 
                               type=int,
                               help='Batch size for training',
@@ -93,8 +94,11 @@ def parse_args():
                               help='Learning Rate for training',
                               default=1e-3)
     # Predict commands
-    parser_b = subparsers.add_parser('predict', help='Use the model for prediction')
-    parser_b.add_argument('--weights_path', type=str, help='help for b')
+    parser_predict = subparsers.add_parser('predict', 
+                                     help='Use the model for prediction')
+    parser_predict.add_argument('--weights_path', 
+                                type=str, 
+                                help='help for b')
     
     # parser.add_argument('-a', 
     #                     type=int,
@@ -109,7 +113,7 @@ def parse_args():
 
     
 def main(args):
-    train_model(args, config.DATA_DIR)
+    train_model(args)
     # pass
 
 

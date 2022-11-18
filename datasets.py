@@ -248,7 +248,7 @@ def build_datasets(batch_size: int):
 
     """
     
-    df = build_noisy_speech_df(config.DATA_DIR)
+    df = build_noisy_speech_df()
     
     df_len = len(df)
     train_len = int(0.8 * df_len)

@@ -38,9 +38,7 @@ def eval_model(model,
         return score
         
 
-def train_model(args,
-                experiment_name: str = "unet0",
-                weights_path: str = None):
+def train_model(args):
     
     # Initialize model, optimizer, loss_fn and metric
     model = UNet()
@@ -48,19 +46,20 @@ def train_model(args,
     loss_fn = SI_NSR_loss()
     metric = SI_SNR()
     # Build training and validation 
-    train_ds, val_ds, _ = build_datasets(config.DATA_DIR, args.batch_size)
+    train_ds, val_ds, _ = build_datasets(args.batch_size)
     
-    training_state_path = config.TRAINING_STATE_DIR / (experiment_name+".json")
+    training_state_path = config.TRAINING_STATE_DIR / (args.experiment_name+".json")
     
-    if weights_path is not None:
-        weights_path = config.WEIGHTS_DIR / weights_path
+    if args.weights_path is not None:
+        weights_path = config.WEIGHTS_DIR / args.weights_path
+        model.built = True
         model.load_weights(weights_path)
         
         with open(training_state_path, "r") as fr:
             training_state = json.load(fr)
          
     else:
-        weights_path = config.WEIGHTS_DIR / experiment_name
+        weights_path = config.WEIGHTS_DIR / args.experiment_name
         training_state = {"epochs": 1,
                           "patience_epochs": 0,  
                           "best_val_loss": np.Inf,
@@ -74,7 +73,7 @@ def train_model(args,
     print('_____________________________')
     print('       Training start')
     print('_____________________________')
-    while training_state["patience_epochs"] < train_config.patience and training_state["epochs"] <= train_config.epochs:
+    while training_state["patience_epochs"] < args.patience and training_state["epochs"] <= args.epochs:
         print(f'\n§ Train epoch: {training_state["epochs"]}\n')
 
         start_epoch = time()        
