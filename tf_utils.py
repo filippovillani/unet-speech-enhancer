@@ -38,13 +38,13 @@ def spectrogram(noisy_speech: tf.Tensor,
 
     """
     
-    noisy_spec = librosa.power_to_db(librosa.feature.melspectrogram(noisy_speech.numpy(), 
+    noisy_spec = librosa.power_to_db(librosa.feature.melspectrogram(y=noisy_speech.numpy(), 
                                                                     sr = sr, 
                                                                     n_fft = n_fft, 
                                                                     hop_length = hop_len,
                                                                     n_mels = n_mels), ref=np.max, top_db=80.) / 80. + 1.
                                                             
-    clean_spec = librosa.power_to_db(librosa.feature.melspectrogram(clean_speech.numpy(),
+    clean_spec = librosa.power_to_db(librosa.feature.melspectrogram(y=clean_speech.numpy(),
                                                                     sr = sr, 
                                                                     n_fft = n_fft, 
                                                                     hop_length = hop_len,
