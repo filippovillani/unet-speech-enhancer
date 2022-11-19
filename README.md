@@ -6,7 +6,10 @@ py -m venv env_name
 env_name\Scripts\activate  
 pip install -r requirements.txt
 ```
-
+To perform speech enhancement on an ```audio.wav``` in ```/mixture_example```:
+```
+main.py predict <audio.wav>
+```
 # Speech Enhancement
 Speech Enhancement is the problem of noise suppression in a speech audio file. 
 A system that can tackle such a task can be beneficial in different scenarios where a speaker is recorded in a noisy environment. 
