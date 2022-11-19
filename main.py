@@ -1,71 +1,16 @@
 import argparse
 
-import tensorflow as tf
-
-from datasets import build_datasets
-from model import UNet, unet
-from metrics import SI_NSR_loss, SI_SNR
-from training import train_model
 import config
-
-# train_config = {'batch_size': 16,
-#                 'epochs': 30,
-#                 'patience': 5,
-#                 'lr': 1e-3}
-# # class Config:
-# #     def __init__(self):
-# #         self.batch_size = 16
-# #         self.epochs = 30
-# #         self.patience = 5
-# #         self.lr = 1e-3
-
-# # train_config = Config()
-# n_mels = 96
-
-# # main_dir = Path(__file__).parent
-# # data_dir = main_dir / "data"
-
-# train_ds, val_ds, test_ds = build_datasets(config.DATA_DIR, train_config.batch_size)
+from training import train_model
+from predict import predict
 
 
-# loss_fn = SI_NSR_loss()
-# snr_metric = SI_SNR()
 
-# enhancer = UNet()
-# train_model(train_config, config.DATA_DIR)
-# # enhancer = unet((n_mels, 248, 1))
-# opt = tf.keras.optimizers.Adam(learning_rate=0.0001)
-
-# enhancer.compile(optimizer=opt, loss=loss_fn, metrics=[snr_metric])
-
-# callbacks_list = [tf.keras.callbacks.EarlyStopping(monitor='val_loss', patience=10),
-#                   tf.keras.callbacks.ModelCheckpoint('unet_reduced_pesq01.hdf5', save_best_only=True)]
-
-# entire_dataset_history = enhancer.fit(train_ds, 
-#                                       validation_data=val_ds, 
-#                                       epochs=train_config.epochs, 
-#                                       callbacks=callbacks_list)
-
-
-#%%
 def parse_args():
-    """
-    Returns
-    -------
-    args : 
-        - train, predict
-        - experiment_name, opt
-        - model_weights_path, opt
-        - batch_size, def 16
-        - epochs    , def 30
-        - patience  , def 10
-        - lr        , def 1e-3
-
-    """
     
     parser = argparse.ArgumentParser(description='U-Net Speech Enhancer',
                                      epilog='I hope it sounds good')
-    subparsers = parser.add_subparsers(help='Help for subcommand', dest="subcommand")
+    subparsers = parser.add_subparsers(help='Help for subcommand', dest="subparser")
     
     # Train commands
     parser_train = subparsers.add_parser('train', help='Train the model')
@@ -79,48 +24,45 @@ def parse_args():
                               default=None)
     parser_train.add_argument('--batch_size', 
                               type=int,
-                              help='Batch size for training',
+                              help='Batch size for training. Def: 16',
                               default=16)
     parser_train.add_argument('--epochs', 
                               type=int,
-                              help='Number of epochs to train the model',
+                              help='Number of epochs to train the model. Def: 30',
                               default=30)
     parser_train.add_argument('--patience', 
                               type=int,
-                              help='Patience parameter for early-stopping',
+                              help='Patience parameter for early-stopping. Def: 10',
                               default=10)
     parser_train.add_argument('--lr', 
                               type=float,
-                              help='Learning Rate for training',
+                              help='Learning Rate for training. Def: 1e-3',
                               default=1e-3)
     # Predict commands
     parser_predict = subparsers.add_parser('predict', 
                                      help='Use the model for prediction')
     parser_predict.add_argument('--weights_path', 
                                 type=str, 
-                                help='Path of model_weights.h5f')
+                                help='Path of model_weights.h5f',
+                                default='unet_reduced_pesq01.hdf5')
     parser_predict.add_argument('--audio_path',
                                 type=str,
                                 help='Relative path to .wav audio in mixture_example folder',
                                 default='download.wav')
-    
-    # parser.add_argument('-a', 
-    #                     type=int,
-    #                     default=3)
-    # parser.add_argument('-b', 
-    #                     type=int,
-    #                     default=5,
-    #                     choices=[4, 5])
-    
+
     args = parser.parse_args()
     return args
 
     
 def main(args):
-    train_model(args)
-    # pass
+    if (args.subparser) == "train":
+        train_model(args)
+    else:
+        predict(args)
 
 
 if __name__ == "__main__":
-    args = parse_args()   
+    args = parse_args() 
     main(args)
+
+            

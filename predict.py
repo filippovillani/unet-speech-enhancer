@@ -18,4 +18,4 @@ def predict(args):
     enhanced_speech = inverse_spectrogram(enhanced_speech_spectr)
     
     output_path = config.PREDICTION_DIR / audio_path.name.replace(".wav", "_prediction.wav")
-    sf.write(output_path, enhanced_speech)
+    sf.write(output_path, enhanced_speech, samplerate=16000)

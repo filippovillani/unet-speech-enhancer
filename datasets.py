@@ -5,7 +5,7 @@ import pandas as pd
 import tensorflow as tf
 
 from utils import signal_power
-from tf_utils import spectrogram, open_audio
+import tf_utils
 import config
 
 # TODO: implement seeds
@@ -181,11 +181,11 @@ def prepare_enhancement_ds(ds: tf.data.Dataset,
     if train:
       ds = ds.shuffle(len(ds))
   
-    ds = ds.map(lambda noise, speech: tf.py_function(open_audio, 
+    ds = ds.map(lambda noise, speech: tf.py_function(tf_utils.open_audio, 
                                                      [noise, speech], 
                                                      [tf.float32, tf.float32]), 
                 num_parallel_calls=tf.data.experimental.AUTOTUNE)
-    ds = ds.map(lambda noisy_speech, clean_speech: tf.py_function(spectrogram, 
+    ds = ds.map(lambda noisy_speech, clean_speech: tf.py_function(tf_utils.spectrogram, 
                                                                   [noisy_speech, clean_speech], 
                                                                   [tf.float32, tf.float32]), 
                 num_parallel_calls=tf.data.experimental.AUTOTUNE)

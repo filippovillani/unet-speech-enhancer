@@ -3,7 +3,7 @@ import os
 
 MAIN_DIR = Path(__file__).parent
 DATA_DIR = MAIN_DIR / "data"
-WEIGHTS_DIR = MAIN_DIR / "checkpoint"
+WEIGHTS_DIR = MAIN_DIR / "weights"
 TRAINING_STATE_DIR = MAIN_DIR / 'training_states'
 PREDICTION_DIR = MAIN_DIR / 'predictions'
 MIX_EX_DIR = MAIN_DIR / 'mixture_example'

@@ -2,7 +2,7 @@ import tensorflow as tf
 import numpy as np
 import librosa
 
-from datasets import generate_noisy_speech
+import datasets
 
 def spectrogram(noisy_speech: tf.Tensor, 
                 clean_speech: tf.Tensor, 
@@ -87,7 +87,7 @@ def open_audio(noise_file: tf.Tensor,
     speech, _ = librosa.load(speech_file.numpy(), mono=mono, sr=sr)
     noise, _ = librosa.load(noise_file.numpy(), mono=mono, sr=sr)
     
-    noisy_speech, speech = generate_noisy_speech(speech, noise, sr=sr, seed=seed)
+    noisy_speech, speech = datasets.generate_noisy_speech(speech, noise, sr=sr, seed=seed)
     
     # Zero mean, unitary variance normalization
     speech = (speech - speech.mean()) / speech.std()
