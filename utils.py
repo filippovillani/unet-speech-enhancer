@@ -27,6 +27,7 @@ def spectrogram(audio,
                 n_fft: int = 1024, 
                 hop_len: int = 259):
     
+    audio = (audio - audio.mean()) / audio.std()
     spectrogram = librosa.power_to_db(librosa.feature.melspectrogram(audio,
                                                                     sr = sr, 
                                                                     n_fft = n_fft, 
@@ -95,6 +96,5 @@ def open_audio(audio_path: str)->np.ndarray:
     """
     
     audio, _ = librosa.load(str(audio_path), sr=16000) 
-    audio = (audio - audio.mean()) / audio.std()
     
     return audio

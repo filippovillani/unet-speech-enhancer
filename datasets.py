@@ -8,7 +8,6 @@ from utils import signal_power
 import tf_utils
 import config
 
-# TODO: implement seeds
 def build_noisy_speech_df():
     """
     Builds a pd.DataFrame that contains the paths to the noise and speech
