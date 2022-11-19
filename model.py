@@ -1,6 +1,6 @@
 import tensorflow as tf
 
-def unet(input_size):
+def unet(input_size=(96,248,1)):
     inputs = tf.keras.layers.Input(input_size)
     
     # Contracting path

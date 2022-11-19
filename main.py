@@ -41,14 +41,15 @@ def parse_args():
     # Predict commands
     parser_predict = subparsers.add_parser('predict', 
                                      help='Use the model for prediction')
+    parser_predict.add_argument('audio_path',
+                                type=str,
+                                help='Relative path to .wav audio in mixture_example folder',
+                                default='download.wav')
     parser_predict.add_argument('--weights_path', 
                                 type=str, 
                                 help='Path of model_weights.h5f',
                                 default='unet_reduced_pesq01.hdf5')
-    parser_predict.add_argument('--audio_path',
-                                type=str,
-                                help='Relative path to .wav audio in mixture_example folder',
-                                default='download.wav')
+
 
     args = parser.parse_args()
     return args
