@@ -1,4 +1,4 @@
-# Installation
+# Installation and Prediction
 Run from the project's root directory
 ```
 pip install virtualenv
