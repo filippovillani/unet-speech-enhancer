@@ -1,3 +1,12 @@
+# Installation
+Run from the project's root directory
+```
+pip install virtualenv
+py -m venv env_name
+env_name\Scripts\activate  
+pip install -r requirements.txt
+```
+
 # Speech Enhancement
 Speech Enhancement is the problem of noise suppression in a speech audio file. 
 A system that can tackle such a task can be beneficial in different scenarios where a speaker is recorded in a noisy environment. 
