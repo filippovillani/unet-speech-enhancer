@@ -23,7 +23,3 @@ if not os.path.exists(PREDICTION_DIR):
 
 if not os.path.exists(MIX_EX_DIR):
     os.mkdir(MIX_EX_DIR)
-
-# TODO
-def set_seed():
-    pass

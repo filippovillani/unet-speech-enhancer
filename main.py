@@ -18,7 +18,7 @@ def parse_args():
                               type=str, 
                               help='Choose a name for your experiment', 
                               default='unet0')
-    parser_train.add_argument('--weights_path', 
+    parser_train.add_argument('--weights_dir', 
                               type=str, 
                               help='If you want to restart the training, specify the weigths location',
                               default=None)
@@ -45,9 +45,9 @@ def parse_args():
                                 type=str,
                                 help='Relative path to .wav audio in mixture_example folder',
                                 default='download.wav')
-    parser_predict.add_argument('--weights_path', 
+    parser_predict.add_argument('--weights_dir', 
                                 type=str, 
-                                help='Path of model_weights.h5f',
+                                help='Directory of model weights',
                                 default='unet_reduced_pesq01.hdf5')
 
 

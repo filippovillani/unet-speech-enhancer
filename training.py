@@ -40,6 +40,30 @@ def eval_model(model,
 
 def train_model(args):
     
+    training_state_path = config.TRAINING_STATE_DIR / (args.experiment_name+".json")
+    
+    if args.weights_dir is not None:
+        weights_dir = config.WEIGHTS_DIR / args.weights_dir
+        model.built = True
+        model.load_weights(weights_dir)
+        
+        with open(training_state_path, "r") as fr:
+            training_state = json.load(fr)
+         
+    else:
+        weights_dir = config.WEIGHTS_DIR / args.experiment_name
+        if not os.path.exists(weights_dir):
+            os.mkdir(weights_dir)
+            
+        training_state = {"epochs": 1,
+                          "patience_epochs": 0,  
+                          "best_val_loss": np.Inf,
+                          "best_val_score": 0,
+                          "best_epoch": 0,
+                          "train_loss_hist": [],
+                          "val_loss_hist": [],
+                          "val_score_hist": []}
+         
     # Initialize model, optimizer, loss_fn and metric
     model = UNet()
     optimizer = tf.keras.optimizers.Adam(learning_rate=args.lr)
@@ -48,28 +72,7 @@ def train_model(args):
     # Build training and validation 
     train_ds, val_ds, _ = build_datasets(args.batch_size)
     
-    training_state_path = config.TRAINING_STATE_DIR / (args.experiment_name+".json")
-    
-    if args.weights_path is not None:
-        weights_path = config.WEIGHTS_DIR / args.weights_path
-        model.built = True
-        model.load_weights(weights_path)
-        
-        with open(training_state_path, "r") as fr:
-            training_state = json.load(fr)
-         
-    else:
-        weights_path = config.WEIGHTS_DIR / args.experiment_name
-        training_state = {"epochs": 1,
-                          "patience_epochs": 0,  
-                          "best_val_loss": np.Inf,
-                          "best_val_score": 0,
-                          "best_epoch": 0,
-                          "train_loss_hist": [],
-                          "val_loss_hist": [],
-                          "train_score_hist": [],
-                          "val_score_hist": []}
-     
+
     print('_____________________________')
     print('       Training start')
     print('_____________________________')
@@ -91,7 +94,7 @@ def train_model(args):
         training_state["train_loss_hist"].append(np.mean(epoch_loss_hist))
         print(f'\nTraining loss:     {training_state["train_loss_hist"][-1]:.4f}')
         
-        # Evaluate on the development test
+        # Evaluate on the valelopment test
         val_score, val_loss = eval_model(model=model, 
                                          test_set=val_ds,
                                          metric=metric,
@@ -109,10 +112,11 @@ def train_model(args):
         else:
             training_state["patience_epochs"] = 0
             training_state["best_val_score"] = val_score
+            training_state["best_val_loss"] = val_loss
             training_state["best_epoch"] = training_state["epochs"]
             print("SI-SNR on validation set improved\n")
             # Save the best model
-            model.save_weights(weights_path)
+            model.save_weights(weights_dir)
             
         training_state["epochs"] += 1 
         
@@ -123,8 +127,8 @@ def train_model(args):
         print('_____________________________')
 
     print('Best epoch on Epoch ', training_state["best_epoch"])    
-    print('Dev SI-NSR Loss:  \t', training_state["dev_loss_hist"][training_state["best_epoch"]-1])
-    print('Dev SI-SNR Score: \t', training_state["best_val_score"])
+    print('val SI-NSR Loss:  \t', training_state["val_loss_hist"][training_state["best_epoch"]-1])
+    print('val SI-SNR Score: \t', training_state["best_val_score"])
     print('____________________________________________')
     
 

@@ -7,10 +7,10 @@ from model import UNet, unet
 from utils import open_audio, spectrogram, inverse_spectrogram
 
 def predict(args):
-    weights_path = config.WEIGHTS_DIR / args.weights_path
+    weights_path = config.WEIGHTS_DIR / args.weights_dir /args.weights_dir
     audio_path = config.MIX_EX_DIR / args.audio_path
-    output_path = config.PREDICTION_DIR / audio_path.name.replace(".wav", "_prediction.wav")
-    
+    output_path = config.PREDICTION_DIR / audio_path.name.replace(".wav", f"_prediction_{args.weights_dir}.wav")
+
     # Initialize the model and load weights
     model = unet()
     model.build = True
