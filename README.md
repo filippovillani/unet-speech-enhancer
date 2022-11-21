@@ -8,7 +8,7 @@ pip install -r requirements.txt
 ```
 To perform speech enhancement on an ```audio.wav``` in ```/mixture_example```:
 ```
-main.py predict <audio.wav>
+main.py predict audio.wav
 ```
 # Speech Enhancement
 Speech Enhancement is the problem of noise suppression in a speech audio file. 
