@@ -25,9 +25,9 @@ def evaluate(args):
         metric.update_state(clean_speech, pred_speech)
         batch_score.append(metric.result().numpy())
 
-    score = {"si-snr": np.mean(batch_score)}
-    
-    with open(output_path, "w") as fw:
-        json.dump(str(score), fw)
-        
+    score = {"si-snr": float(np.mean(batch_score))}
     print(f'\n SI_SNR = {score["si-snr"]} dB')
+
+    with open(output_path, "w") as fp:
+        json.dump(score, fp)
+        

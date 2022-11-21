@@ -29,8 +29,8 @@ def eval_model(model,
         loss_ = loss_fn(clean_speech, pred_speech)
         batch_loss.append(loss_)
 
-    score = np.mean(batch_score)
-    loss = np.mean(batch_loss)
+    score = float(np.mean(batch_score))
+    loss = float(np.mean(batch_loss))
     
     return score, loss
 
