@@ -3,7 +3,7 @@ import argparse
 import config
 from training import train_model
 from predict import predict
-
+from evaluate import evaluate
 
 
 def parse_args():
@@ -48,18 +48,26 @@ def parse_args():
     parser_predict.add_argument('--weights_dir', 
                                 type=str, 
                                 help='Directory of model weights',
-                                default='unet_reduced_pesq01.hdf5')
+                                default='unet0')
 
+    # Evaluate commands
+    parser_eval = subparsers.add_parser('evaluate', help='Evaluate the model')
+    parser_eval.add_argument('--weights_dir',
+                            type=str, 
+                            help='Directory of model weights',
+                            default='unet0')
 
     args = parser.parse_args()
     return args
 
     
 def main(args):
-    if (args.subparser) == "train":
+    if args.subparser == "train":
         train_model(args)
-    else:
+    elif args.subparser == "predict":
         predict(args)
+    elif args.subparser == "evaluate":
+        evaluate(args)
 
 
 if __name__ == "__main__":

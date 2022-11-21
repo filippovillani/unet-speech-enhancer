@@ -4,7 +4,7 @@ import os
 MAIN_DIR = Path(__file__).parent
 DATA_DIR = MAIN_DIR / "data"
 WEIGHTS_DIR = MAIN_DIR / "weights"
-TRAINING_STATE_DIR = MAIN_DIR / 'training_states'
+RESULTS_DIR = MAIN_DIR / 'results'
 PREDICTION_DIR = MAIN_DIR / 'predictions'
 MIX_EX_DIR = MAIN_DIR / 'mixture_example'
 
@@ -12,8 +12,8 @@ MIX_EX_DIR = MAIN_DIR / 'mixture_example'
 if not os.path.exists(WEIGHTS_DIR):
     os.mkdir(WEIGHTS_DIR)
 
-if not os.path.exists(TRAINING_STATE_DIR):
-    os.mkdir(TRAINING_STATE_DIR)
+if not os.path.exists(RESULTS_DIR):
+    os.mkdir(RESULTS_DIR)
     
 if not os.path.exists(DATA_DIR):
     os.mkdir(DATA_DIR)
