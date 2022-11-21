@@ -15,43 +15,45 @@ import config
 def eval_model(model, 
                test_set,
                metric,
-               loss_fn = None):
+               loss_fn):
+
     batch_score = []
     batch_loss = []
     for batch in test_set:
         noisy_speech, clean_speech = batch[0], batch[1]
+
         pred_speech = model(noisy_speech, training=False)
         metric.update_state(clean_speech, pred_speech)
-        
-        if loss_fn is not None:
-            loss_ = loss_fn(clean_speech, pred_speech)
-            batch_loss.append(loss_)
-        
         batch_score.append(metric.result().numpy())
+
+        loss_ = loss_fn(clean_speech, pred_speech)
+        batch_loss.append(loss_)
+
     score = np.mean(batch_score)
-    # TODO: check if this line is needed somewhere
-    # metric.reset_states()
-    if loss_fn is not None:
-        loss = np.mean(batch_loss)
-        return score, loss
-    else:
-        return score
+    loss = np.mean(batch_loss)
+    
+    return score, loss
+
         
 
 def train_model(args):
     
-    training_state_path = config.TRAINING_STATE_DIR / (args.experiment_name+".json")
+    training_state_path = config.RESULTS_DIR / (args.experiment_name+"_train_state.json")
     
+    model = UNet()
+
     if args.weights_dir is not None:
         weights_dir = config.WEIGHTS_DIR / args.weights_dir
+        weights_path = weights_dir / args.weights_dir
         model.built = True
-        model.load_weights(weights_dir)
+        model.load_weights(weights_path)
         
         with open(training_state_path, "r") as fr:
             training_state = json.load(fr)
          
     else:
         weights_dir = config.WEIGHTS_DIR / args.experiment_name
+        weights_path = weights_dir / args.experiment_name
         if not os.path.exists(weights_dir):
             os.mkdir(weights_dir)
             
@@ -64,8 +66,7 @@ def train_model(args):
                           "val_loss_hist": [],
                           "val_score_hist": []}
          
-    # Initialize model, optimizer, loss_fn and metric
-    model = UNet()
+    # Initialize optimizer, loss_fn and metric
     optimizer = tf.keras.optimizers.Adam(learning_rate=args.lr)
     loss_fn = SI_NSR_loss()
     metric = SI_SNR()
@@ -116,7 +117,7 @@ def train_model(args):
             training_state["best_epoch"] = training_state["epochs"]
             print("SI-SNR on validation set improved\n")
             # Save the best model
-            model.save_weights(weights_dir)
+            model.save_weights(weights_path)
             
         training_state["epochs"] += 1 
         
