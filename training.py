@@ -40,12 +40,11 @@ def train_model(args):
     
     training_state_path = config.RESULTS_DIR / (args.experiment_name+"_train_state.json")
     
-    model = UNet()
+    model = UNet.build_model(input_size=(96, 248, 1))
 
     if args.weights_dir is not None:
         weights_dir = config.WEIGHTS_DIR / args.weights_dir
         weights_path = weights_dir / args.weights_dir
-        model.built = True
         model.load_weights(weights_path)
         
         with open(training_state_path, "r") as fr:
@@ -59,7 +58,7 @@ def train_model(args):
             
         training_state = {"epochs": 1,
                           "patience_epochs": 0,  
-                          "best_val_loss": np.Inf,
+                          "best_val_loss": 9999,
                           "best_val_score": 0,
                           "best_epoch": 0,
                           "train_loss_hist": [],
@@ -90,12 +89,15 @@ def train_model(args):
                 train_loss = loss_fn(clean_speech, pred_speech)
             grads = tape.gradient(train_loss, model.trainable_variables)
             optimizer.apply_gradients(zip(grads, model.trainable_variables))
-            epoch_loss_hist.append(train_loss)     
+            epoch_loss_hist.append(train_loss)  
+            if n == 3: 
+                break   
+
         
-        training_state["train_loss_hist"].append(np.mean(epoch_loss_hist))
+        training_state["train_loss_hist"].append(float(np.mean(epoch_loss_hist)))
         print(f'\nTraining loss:     {training_state["train_loss_hist"][-1]:.4f}')
         
-        # Evaluate on the valelopment test
+        # Evaluate on the validation set
         val_score, val_loss = eval_model(model=model, 
                                          test_set=val_ds,
                                          metric=metric,
@@ -118,11 +120,11 @@ def train_model(args):
             print("SI-SNR on validation set improved\n")
             # Save the best model
             model.save_weights(weights_path)
-            
-        training_state["epochs"] += 1 
-        
+                    
         with open(training_state_path, "w") as fw:
             json.dump(training_state, fw)
+
+        training_state["epochs"] += 1 
 
         print(f'Epoch time: {int(((time()-start_epoch))//60)} min {int((((time()-start_epoch))%60)*60/100)} s')
         print('_____________________________')
@@ -131,5 +133,3 @@ def train_model(args):
     print('val SI-NSR Loss:  \t', training_state["val_loss_hist"][training_state["best_epoch"]-1])
     print('val SI-SNR Score: \t', training_state["best_val_score"])
     print('____________________________________________')
-    
-

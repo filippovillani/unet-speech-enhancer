@@ -3,19 +3,19 @@ import json
 
 import config
 from metrics import SI_SNR
-from model import unet
+from model import UNet
 from datasets import build_datasets
 
 def evaluate(args):
     weights_dir = config.WEIGHTS_DIR / args.weights_dir / args.weights_dir
     output_path = config.RESULTS_DIR / (args.weights_dir + '_eval.json')
 
-    model = unet()
+    model = UNet.build_model((96, 248, 1))
     metric = SI_SNR()
-    model.built = True
+    # model.built = True
     model.load_weights(weights_dir)
 
-    _, _,  test_set = build_datasets(batch_size=8)
+    _, _,  test_set = build_datasets(batch_size=4)
     
     batch_score = []
     for batch in test_set:

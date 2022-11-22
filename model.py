@@ -38,56 +38,56 @@ def unet(input_size=(96,248,1)):
     model = tf.keras.Model(inputs = inputs, outputs = output)
     return model
 
-class UNet(tf.keras.Model):
+class UNet(tf.keras.layers.Layer):
     def __init__(self, name="u-net"):
         super(UNet, self).__init__(name=name)
         # Contracting path
-        self.convC11 = tf.keras.layers.Conv2D(64, 3, activation='relu', padding='same', kernel_initializer='he_normal')
-        self.convC12 = tf.keras.layers.Conv2D(64, 3, activation=None, padding='same', kernel_initializer='he_normal')
-        self.batchC1 = tf.keras.layers.BatchNormalization()
-        self.actC1 = tf.keras.layers.Activation('relu')
-        self.dropC1 = tf.keras.layers.Dropout(0.3)
-        self.poolC1 = tf.keras.layers.MaxPool2D()
+        self.convC11 = tf.keras.layers.Conv2D(64, 3, activation='relu', padding='same', kernel_initializer='he_normal', name='convC11')
+        self.convC12 = tf.keras.layers.Conv2D(64, 3, activation=None, padding='same', kernel_initializer='he_normal', name='convC12')
+        self.batchC1 = tf.keras.layers.BatchNormalization(name='batchC1')
+        self.actC1 = tf.keras.layers.Activation('relu', name='actC1')
+        self.dropC1 = tf.keras.layers.Dropout(0.3, name='actC1')
+        self.poolC1 = tf.keras.layers.MaxPool2D(name='actC1')
 
-        self.convC21 = tf.keras.layers.Conv2D(128, 3, activation='relu', padding='same', kernel_initializer='he_normal')
-        self.convC22 = tf.keras.layers.Conv2D(128, 3, activation=None, padding='same', kernel_initializer='he_normal')
-        self.batchC2 = tf.keras.layers.BatchNormalization() 
-        self.actC2 = tf.keras.layers.Activation('relu')
-        self.dropC2 = tf.keras.layers.Dropout(0.3)
-        self.poolC2 = tf.keras.layers.MaxPool2D()
+        self.convC21 = tf.keras.layers.Conv2D(128, 3, activation='relu', padding='same', kernel_initializer='he_normal', name='convC21')
+        self.convC22 = tf.keras.layers.Conv2D(128, 3, activation=None, padding='same', kernel_initializer='he_normal', name='convC22')
+        self.batchC2 = tf.keras.layers.BatchNormalization(name='batchC2') 
+        self.actC2 = tf.keras.layers.Activation('relu', name='actC2')
+        self.dropC2 = tf.keras.layers.Dropout(0.3, name='dropC2')
+        self.poolC2 = tf.keras.layers.MaxPool2D(name='poolC2')
 
-        self.convC31 = tf.keras.layers.Conv2D(256, 3, activation='relu', padding='same', kernel_initializer='he_normal')
-        self.convC32 = tf.keras.layers.Conv2D(256, 3, activation=None, padding='same', kernel_initializer='he_normal')
-        self.batchC3 = tf.keras.layers.BatchNormalization() 
-        self.actC3 = tf.keras.layers.Activation('relu')
-        self.dropC3 = tf.keras.layers.Dropout(0.3)
-        self.poolC3 = tf.keras.layers.MaxPool2D()
+        self.convC31 = tf.keras.layers.Conv2D(256, 3, activation='relu', padding='same', kernel_initializer='he_normal', name='convC31')
+        self.convC32 = tf.keras.layers.Conv2D(256, 3, activation=None, padding='same', kernel_initializer='he_normal', name='convC32')
+        self.batchC3 = tf.keras.layers.BatchNormalization(name='batchC3') 
+        self.actC3 = tf.keras.layers.Activation('relu', name='actC3')
+        self.dropC3 = tf.keras.layers.Dropout(0.3, name='dropC3')
+        self.poolC3 = tf.keras.layers.MaxPool2D(name='poolC3')
         
-        self.convC41 = tf.keras.layers.Conv2D(512, 3, activation='relu', padding='same', kernel_initializer='he_normal')
-        self.convC42 = tf.keras.layers.Conv2D(512, 3, activation=None, padding='same', kernel_initializer='he_normal')
-        self.dropC4 = tf.keras.layers.Dropout(0.3)
+        self.convC41 = tf.keras.layers.Conv2D(512, 3, activation='relu', padding='same', kernel_initializer='he_normal', name='convC41')
+        self.convC42 = tf.keras.layers.Conv2D(512, 3, activation=None, padding='same', kernel_initializer='he_normal', name='convC42')
+        self.dropC4 = tf.keras.layers.Dropout(0.3, name='dropC4')
         
         #Expanding path
-        self.upsamp3 = tf.keras.layers.UpSampling2D()
-        self.upconvE3 = tf.keras.layers.Conv2D(512, 2, activation='relu', padding='same', kernel_initializer='he_normal')
-        self.convE31 = tf.keras.layers.Conv2D(256, 3, activation='relu', padding='same', kernel_initializer='he_normal')
-        self.convE32 = tf.keras.layers.Conv2D(256, 3, activation=None, padding='same', kernel_initializer='he_normal')
-        self.batchE3 = tf.keras.layers.BatchNormalization() 
-        self.actE3 = tf.keras.layers.Activation('relu')
+        self.upsamp3 = tf.keras.layers.UpSampling2D(name='upsamp3')
+        self.upconvE3 = tf.keras.layers.Conv2D(512, 2, activation='relu', padding='same', kernel_initializer='he_normal', name='upconvE3')
+        self.convE31 = tf.keras.layers.Conv2D(256, 3, activation='relu', padding='same', kernel_initializer='he_normal', name='convE31')
+        self.convE32 = tf.keras.layers.Conv2D(256, 3, activation=None, padding='same', kernel_initializer='he_normal', name='convE32')
+        self.batchE3 = tf.keras.layers.BatchNormalization(name='batchE3') 
+        self.actE3 = tf.keras.layers.Activation('relu', name='actE3')
 
-        self.upsamp2 = tf.keras.layers.UpSampling2D()
-        self.upconvE2 = tf.keras.layers.Conv2D(256, 2, activation='relu', padding='same', kernel_initializer='he_normal')
-        self.convE21 = tf.keras.layers.Conv2D(128, 3, activation='relu', padding='same', kernel_initializer='he_normal')
-        self.convE22 = tf.keras.layers.Conv2D(128, 3, activation=None, padding='same', kernel_initializer='he_normal')
-        self.batchE2 = tf.keras.layers.BatchNormalization() 
-        self.actE2 = tf.keras.layers.Activation('relu')
+        self.upsamp2 = tf.keras.layers.UpSampling2D(name='upsamp2')
+        self.upconvE2 = tf.keras.layers.Conv2D(256, 2, activation='relu', padding='same', kernel_initializer='he_normal', name='upconvE2')
+        self.convE21 = tf.keras.layers.Conv2D(128, 3, activation='relu', padding='same', kernel_initializer='he_normal', name='convE21')
+        self.convE22 = tf.keras.layers.Conv2D(128, 3, activation=None, padding='same', kernel_initializer='he_normal', name='convE22')
+        self.batchE2 = tf.keras.layers.BatchNormalization(name='batchE2') 
+        self.actE2 = tf.keras.layers.Activation('relu', name='actE2')
          
-        self.upsamp1 = tf.keras.layers.UpSampling2D()
-        self.upconvE1 = tf.keras.layers.Conv2D(128, 2, activation='relu', padding='same', kernel_initializer='he_normal')
-        self.convE11 = tf.keras.layers.Conv2D(64, 3, activation='relu', padding='same', kernel_initializer='he_normal')
-        self.convE12 = tf.keras.layers.Conv2D(64, 3, activation='relu', padding='same', kernel_initializer='he_normal')
-        self.convE13 = tf.keras.layers.Conv2D(2, 3, activation='relu', padding='same', kernel_initializer='he_normal')
-        self.out = tf.keras.layers.Conv2D(1, 1, activation='sigmoid')
+        self.upsamp1 = tf.keras.layers.UpSampling2D(name='upsamp1')
+        self.upconvE1 = tf.keras.layers.Conv2D(128, 2, activation='relu', padding='same', kernel_initializer='he_normal', name='upconvE1')
+        self.convE11 = tf.keras.layers.Conv2D(64, 3, activation='relu', padding='same', kernel_initializer='he_normal', name='convE11')
+        self.convE12 = tf.keras.layers.Conv2D(64, 3, activation='relu', padding='same', kernel_initializer='he_normal', name='convE12')
+        self.convE13 = tf.keras.layers.Conv2D(2, 3, activation='relu', padding='same', kernel_initializer='he_normal', name='convE13')
+        self.out = tf.keras.layers.Conv2D(1, 1, activation='sigmoid', name='out')
     
     def call(self, inputs):
         x = self.convC11(inputs)
@@ -139,9 +139,12 @@ class UNet(tf.keras.Model):
         x = self.convE13(x)
         x = self.out(x)
         
-        return x        
+        return x    
     
-if __name__ == "__main__":
-    model = UNet()
-    sample = tf.random.normal((16, 96, 248, 1))
-    print(model(sample).shape)
+    def build_model(input_size):
+        inputs = tf.keras.layers.Input(input_size)
+        model = UNet()
+        outputs = model(inputs)              
+        model = tf.keras.Model(inputs = inputs, outputs = outputs)
+        return model    
+    
