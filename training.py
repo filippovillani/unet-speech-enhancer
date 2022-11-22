@@ -89,10 +89,7 @@ def train_model(args):
                 train_loss = loss_fn(clean_speech, pred_speech)
             grads = tape.gradient(train_loss, model.trainable_variables)
             optimizer.apply_gradients(zip(grads, model.trainable_variables))
-            epoch_loss_hist.append(train_loss)  
-            if n == 3: 
-                break   
-
+            epoch_loss_hist.append(train_loss)   
         
         training_state["train_loss_hist"].append(float(np.mean(epoch_loss_hist)))
         print(f'\nTraining loss:     {training_state["train_loss_hist"][-1]:.4f}')
