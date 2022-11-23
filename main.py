@@ -44,7 +44,7 @@ def parse_args():
     parser_predict.add_argument('audio_path',
                                 type=str,
                                 help='Relative path to .wav audio in mixture_example folder',
-                                default='download.wav')
+                                default='noisy0.wav')
     parser_predict.add_argument('--weights_dir', 
                                 type=str, 
                                 help='Directory of model weights',
