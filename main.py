@@ -5,11 +5,19 @@ from training import train_model
 from predict import predict
 from evaluate import evaluate
 
-
-def parse_args():
     
+def main(args):
+    if args.subparser == "train":
+        train_model(args)
+    elif args.subparser == "predict":
+        predict(args)
+    elif args.subparser == "evaluate":
+        evaluate(args)
+
+
+if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='U-Net Speech Enhancer',
-                                     epilog='I hope it sounds good')
+                                    epilog='I hope it sounds good')
     subparsers = parser.add_subparsers(help='Help for subcommand', dest="subparser")
     
     # Train commands
@@ -58,18 +66,5 @@ def parse_args():
                             default='unet0')
 
     args = parser.parse_args()
-    return args
-
     
-def main(args):
-    if args.subparser == "train":
-        train_model(args)
-    elif args.subparser == "predict":
-        predict(args)
-    elif args.subparser == "evaluate":
-        evaluate(args)
-
-
-if __name__ == "__main__":
-    args = parse_args() 
     main(args)
