@@ -3,11 +3,19 @@ import librosa
 import librosa.display
 import pandas as pd
 import torch
-from torch.utils.data import Dataset, DataLoader
+from torch.utils.data import Dataset, DataLoader, random_split
 from argparse import Namespace
+from typing import Tuple
 
 from utils import melspectrogram, signal_power
-import config
+
+def build_datasets(data_dir: str, 
+                   hparams: Namespace)->Tuple[Dataset, Dataset, Dataset]: 
+    
+    ds = NoisySpeechDataset(data_dir, hparams)
+    train_ds, val_ds, test_ds = random_split(ds, [0.7, 0.15, 0.15], generator=torch.Generator().manual_seed(42))
+    
+    return train_ds, val_ds, test_ds
 
 class NoisySpeechDataset(Dataset):
     def __init__(self, 
@@ -200,13 +208,8 @@ class NoisySpeechDataset(Dataset):
         return len(self.df)
 
 if __name__ == "__main__":
-    hparams = config.create_hparams()
-    ds = NoisySpeechDataset(config.DATA_DIR, hparams)
-    train_ds, val_ds, test_ds = torch.utils.data.random_split(ds, [0.7, 0.15, 0.15])
-    train_dl = DataLoader(train_ds, hparams.batch_size, shuffle=True)
-    for el in train_dl: 
+    import config
+    train_ds, val_ds, test_ds = build_datasets(config.DATA_DIR, config.create_hparams())
+    for el in train_ds:
         print(el["speech"].shape)
         break
-
-
-
