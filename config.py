@@ -1,5 +1,17 @@
 from pathlib import Path
+from argparse import Namespace
 import os
+
+def create_hparams():
+    hparams = Namespace(batch_size=16,
+                        sr = 16000,
+                        n_mels = 96,
+                        n_fft = 1024,
+                        hop_len = 259,
+                        audio_ms = 4000,
+                        min_noise_ms = 1000)
+    return hparams
+
 
 MAIN_DIR = Path(__file__).parent
 DATA_DIR = MAIN_DIR / "data"

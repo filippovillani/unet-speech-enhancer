@@ -4,7 +4,7 @@ import json
 import config
 from metrics import SI_SNR
 from model import UNet
-from datasets import build_datasets
+from dataset import build_datasets
 
 def evaluate(args):
     weights_dir = config.WEIGHTS_DIR / args.weights_dir / args.weights_dir
