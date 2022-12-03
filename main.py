@@ -7,12 +7,13 @@ from evaluate import evaluate
 
     
 def main(args):
+    hparams = config.create_hparams()
     if args.subparser == "train":
-        train_model(args)
+        train_model(args, hparams)
     elif args.subparser == "predict":
         predict(args)
     elif args.subparser == "evaluate":
-        evaluate(args)
+        evaluate(args, hparams)
 
 
 if __name__ == "__main__":
@@ -30,22 +31,7 @@ if __name__ == "__main__":
                               type=str, 
                               help='If you want to restart the training, specify the weigths location',
                               default=None)
-    parser_train.add_argument('--batch_size', 
-                              type=int,
-                              help='Batch size for training. Def: 16',
-                              default=16)
-    parser_train.add_argument('--epochs', 
-                              type=int,
-                              help='Number of epochs to train the model. Def: 30',
-                              default=30)
-    parser_train.add_argument('--patience', 
-                              type=int,
-                              help='Patience parameter for early-stopping. Def: 10',
-                              default=10)
-    parser_train.add_argument('--lr', 
-                              type=float,
-                              help='Learning Rate for training. Def: 1e-3',
-                              default=1e-3)
+
     # Predict commands
     parser_predict = subparsers.add_parser('predict', 
                                      help='Use the model for prediction')

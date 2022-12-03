@@ -36,11 +36,11 @@ def eval_model(model,
 
         
 
-def train_model(args):
+def train_model(args, hparams):
     
     training_state_path = config.RESULTS_DIR / (args.experiment_name+"_train_state.json")
     
-    model = UNet.build_model(input_size=(96, 248, 1))
+    model = UNet.build_model(input_size=(hparams.n_mels, hparams.frame_len, hparams.num_channels))
 
     if args.weights_dir is not None:
         weights_dir = config.WEIGHTS_DIR / args.weights_dir
@@ -66,17 +66,17 @@ def train_model(args):
                           "val_score_hist": []}
          
     # Initialize optimizer, loss_fn and metric
-    optimizer = tf.keras.optimizers.Adam(learning_rate=args.lr)
+    optimizer = tf.keras.optimizers.Adam(learning_rate=hparams.lr)
     loss_fn = SI_NSR_loss()
     metric = SI_SNR()
     # Build training and validation 
-    train_ds, val_ds, _ = build_datasets(args.batch_size)
+    train_ds, val_ds, _ = build_datasets(config.DATA_DIR, hparams)
     
 
     print('_____________________________')
     print('       Training start')
     print('_____________________________')
-    while training_state["patience_epochs"] < args.patience and training_state["epochs"] <= args.epochs:
+    while training_state["patience_epochs"] < hparams.patience and training_state["epochs"] <= hparams.epochs:
         print(f'\n§ Train epoch: {training_state["epochs"]}\n')
 
         start_epoch = time()        

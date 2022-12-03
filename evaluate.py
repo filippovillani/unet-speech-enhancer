@@ -6,16 +6,15 @@ from metrics import SI_SNR
 from model import UNet
 from dataset import build_datasets
 
-def evaluate(args):
+def evaluate(args, hparams):
     weights_dir = config.WEIGHTS_DIR / args.weights_dir / args.weights_dir
     output_path = config.RESULTS_DIR / (args.weights_dir + '_eval.json')
 
-    model = UNet.build_model((96, 248, 1))
+    model = UNet.build_model((hparams.n_mels, hparams.frame_len, hparams.num_channels))
     metric = SI_SNR()
-    # model.built = True
     model.load_weights(weights_dir)
 
-    _, _,  test_set = build_datasets(batch_size=4)
+    _, _,  test_set = build_datasets(config.DATA_DIR, hparams)
     
     batch_score = []
     for batch in test_set:
