@@ -204,16 +204,9 @@ class UNet(nn.Module):
         
         return x    
     
-    # TODO: remove
-    def build_model(input_size):
-        inputs = tf.keras.layers.Input(input_size)
-        model = UNet()
-        outputs = model(inputs)              
-        model = tf.keras.Model(inputs = inputs, outputs = outputs)
-        return model    
     
 if __name__ == "__main__":
-    ao = torch.zeros((16, 96, 256, 1))
-    ao = torch.permute(ao, (0, 3, 1, 2))
+    batch = torch.zeros((16, 96, 256, 1))
+    batch = torch.permute(batch, (0, 3, 1, 2))
     model = UNet()
-    ao_out = model(ao)
+    batch_out = model(batch)

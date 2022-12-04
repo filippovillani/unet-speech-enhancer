@@ -6,7 +6,7 @@ import numpy as np
 from time import time
 from tqdm import tqdm
 
-from dataset import build_datasets
+from dataset import build_dataloaders
 from model import UNet
 from metrics import SI_NSR_loss, SI_SNR
 import config
@@ -70,7 +70,7 @@ def train_model(args, hparams):
     loss_fn = SI_NSR_loss()
     metric = SI_SNR()
     # Build training and validation 
-    train_ds, val_ds, _ = build_datasets(config.DATA_DIR, hparams)
+    train_ds, val_ds, _ = build_dataloaders(config.DATA_DIR, hparams)
     
 
     print('_____________________________')

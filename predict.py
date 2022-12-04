@@ -4,8 +4,8 @@ import tensorflow as tf
 import librosa 
 
 import config
-from model import UNet, unet
-from utils import open_audio, melspectrogram, inverse_spectrogram
+from model import UNet
+from utils import melspectrogram, inverse_spectrogram
 from save_plots import plot_spectrograms
 
 def predict(args):
@@ -17,7 +17,8 @@ def predict(args):
     audio, _ = librosa.load(str(audio_path), sr=16000) 
     spectr = tf.expand_dims(melspectrogram(audio), axis=0)
     # Initialize the model and load weights
-    model = UNet.build_model(input_size=(96, 248, 1))
+    model = UNet()
+    # TODO: load torch weights
     model.load_weights(weights_path)
 
     # spectr = tf.expand_dims(spectrogram(audio), axis=0)
