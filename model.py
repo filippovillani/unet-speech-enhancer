@@ -39,8 +39,8 @@ def unet(input_size=(96,248,1)):
     return model
 
 class UNet(nn.Module):
-    def __init__(self, name="u-net"):
-        super(UNet, self).__init__(name=name)
+    def __init__(self):
+        super(UNet, self).__init__()
         # Contracting path      
         self.convC11 = nn.Conv2d(1, 64, 3, padding='same')
         nn.init.kaiming_normal_(self.convC11.weight)
@@ -64,6 +64,7 @@ class UNet(nn.Module):
 
         self.convC31 = nn.Conv2d(128, 256, 3, padding='same')
         nn.init.kaiming_normal_(self.convC31.weight)
+        self.bnC31 = nn.BatchNorm2d(256)
         self.reluC31 = nn.ReLU() 
         self.convC32 = nn.Conv2d(256, 256, 3, padding='same')
         nn.init.kaiming_normal_(self.convC32.weight)
@@ -75,35 +76,35 @@ class UNet(nn.Module):
         self.convC41 = nn.Conv2d(256, 512, 3, padding='same')
         nn.init.kaiming_normal_(self.convC41.weight)
         self.reluC41 = nn.ReLU() 
-        self.convC42 = nn.Conv2d(512, 512, 3, padding='same')
+        self.convC42 = nn.Conv2d(512, 256, 3, padding='same')
         nn.init.kaiming_normal_(self.convC42.weight)
-        self.bnC42 = nn.BatchNorm2d(512)
+        self.bnC42 = nn.BatchNorm2d(256)
         self.reluC42 = nn.ReLU() 
         self.dropC4 = nn.Dropout(0.3)
-              
+        
+        
         #Expanding path
         self.upsamp3 = nn.Upsample(scale_factor=2, mode='bilinear', align_corners=True)
-        self.upconvE3 = nn.Conv2d(512, 512, 2, padding='same')
-        nn.init.kaiming_normal_(self.upconvE3.weight)
-        self.upreluE3 = nn.ReLU() 
-        self.convE31 = nn.Conv2d(1024, 512, 3, padding='same')
+        self.convE31 = nn.Conv2d(1024, 256, 3, padding='same')
         nn.init.kaiming_normal_(self.convE31.weight)
+        self.bnE31 = nn.BatchNorm2d(256)
         self.reluE31 = nn.ReLU() 
-        self.convE32 = nn.Conv2d(512, 512, 3, padding='same')
+        self.convE32 = nn.Conv2d(256, 256, 3, padding='same')
         nn.init.kaiming_normal_(self.convE32.weight)
-        self.bnE32 = nn.BatchNorm2d(512)
+        self.bnE32 = nn.BatchNorm2d(256)
         self.reluE32 = nn.ReLU() 
 
         self.upsamp2 = nn.Upsample(scale_factor=2, mode='bilinear', align_corners=True)
-        self.upconvE2 = nn.Conv2d(512, 512, 2, padding='same')
+        self.upconvE2 = nn.Conv2d(512, 128, 2, padding='same')
         nn.init.kaiming_normal_(self.upconvE2.weight)
+        self.bnE21 = nn.BatchNorm2d(128)
         self.upreluE2 = nn.ReLU() 
-        self.convE21 = nn.Conv2d(1024, 512, 3, padding='same')
+        self.convE21 = nn.Conv2d(128, 128, 3, padding='same')
         nn.init.kaiming_normal_(self.convE21.weight)
         self.reluE21 = nn.ReLU() 
-        self.convE22 = nn.Conv2d(512, 512, 3, padding='same')
+        self.convE22 = nn.Conv2d(128, 128, 3, padding='same')
         nn.init.kaiming_normal_(self.convE22.weight)
-        self.bnE22 = nn.BatchNorm2d(512)
+        self.bnE22 = nn.BatchNorm2d(128)
         self.reluE22 = nn.ReLU() 
         
         self.upsamp2 = tf.keras.layers.UpSampling2D(name='upsamp2')
