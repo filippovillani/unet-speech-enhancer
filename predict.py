@@ -9,6 +9,7 @@ from utils import melspectrogram, inverse_spectrogram
 from save_plots import plot_spectrograms
 
 def predict(args):
+    # TODO: to pytorch
     weights_path = config.WEIGHTS_DIR / args.weights_dir / args.weights_dir
     audio_path = config.MIX_EX_DIR / args.audio_path
     output_path = config.PREDICTION_DIR / audio_path.name.replace(".wav", f"_prediction_{args.weights_dir}.wav")
@@ -17,7 +18,7 @@ def predict(args):
     audio, _ = librosa.load(str(audio_path), sr=16000) 
     spectr = tf.expand_dims(melspectrogram(audio), axis=0)
     # Initialize the model and load weights
-    model = UNet()
+    model = UNet().double().to(config.device)
     # TODO: load torch weights
     model.load_weights(weights_path)
 

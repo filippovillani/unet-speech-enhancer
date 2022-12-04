@@ -13,13 +13,14 @@ import config
 def eval_model(model: torch.nn.Module, 
                dataloader: torch.utils.data.DataLoader)->torch.Tensor:
 
+    model.eval()
+
     score = 0.
     loss = 0.
-    model.eval()
     
     with torch.no_grad():
         for n, batch in enumerate(tqdm(dataloader)):
-            noisy_speech, clean_speech = batch["noisy"], batch["speech"]
+            noisy_speech, clean_speech = batch["noisy"].to(config.device), batch["speech"].to(config.device)
 
             enhanced_speech = model(noisy_speech)
             snr_metric = si_snr_metric(enhanced_speech, clean_speech)
@@ -36,7 +37,7 @@ def train_model(args, hparams):
     
     training_state_path = config.RESULTS_DIR / (args.experiment_name+"_train_state.json")
     
-    model = UNet().double()
+    model = UNet().double().to(config.device)
     optimizer = torch.optim.Adam(params=model.parameters(),
                                  lr=hparams.lr)
 
@@ -83,7 +84,7 @@ def train_model(args, hparams):
    
         for n, batch in enumerate(tqdm(train_dl, desc=f'Epoch {training_state["epochs"]}')):   
             optimizer.zero_grad()  
-            noisy_speech, clean_speech = batch["noisy"], batch["speech"]
+            noisy_speech, clean_speech = batch["noisy"].to(config.device), batch["speech"].to(config.device)
             enhanced_speech = model(noisy_speech.double())
             loss = si_nsr_loss(enhanced_speech, clean_speech)
             train_loss += ((1./(n+1))*(loss-train_loss))
@@ -94,11 +95,12 @@ def train_model(args, hparams):
         print(f'\nTraining loss:     {training_state["train_loss_hist"][-1]:.4f}')
         
         # Evaluate on the validation set
+        print(f'Evaluating the model on validation set...')
         val_score, val_loss = eval_model(model=model, 
                                          dataloader=val_dl)
         
-        training_state["val_loss_hist"].append(val_loss.numpy())
-        training_state["val_score_hist"].append(val_score.numpy())
+        training_state["val_loss_hist"].append(val_loss.item())
+        training_state["val_score_hist"].append(val_score.item())
         
         print(f'\nValidation Loss:   {val_loss:.4f}\n')
         print(f'\nValidation SI_SNR: {val_score:.4f}\n')
@@ -108,8 +110,8 @@ def train_model(args, hparams):
             print(f'Best epoch was Epoch {training_state["best_epoch"]}')
         else:
             training_state["patience_epochs"] = 0
-            training_state["best_val_score"] = val_score.numpy()
-            training_state["best_val_loss"] = val_loss.numpy()
+            training_state["best_val_score"] = val_score.item()
+            training_state["best_val_loss"] = val_loss.item()
             training_state["best_epoch"] = training_state["epochs"]
             print("SI-SNR on validation set improved\n")
             # Save the best model

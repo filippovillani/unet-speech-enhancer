@@ -1,30 +1,36 @@
-import numpy as np
 import json
+import torch
+from tqdm import tqdm
 
 import config
-from metrics import SI_SNR
+from metrics import si_nsr_loss, si_snr_metric
 from model import UNet
-from dataset import build_datasets
+from dataset import build_dataloaders
 
 def evaluate(args, hparams):
-    weights_dir = config.WEIGHTS_DIR / args.weights_dir / args.weights_dir
+    
+    weights_dir = config.WEIGHTS_DIR / args.weights_dir 
+    weights_path = weights_dir / args.weights_dir    
     output_path = config.RESULTS_DIR / (args.weights_dir + '_eval.json')
 
-    model = UNet.build_model((hparams.n_mels, hparams.frame_len, hparams.num_channels))
-    metric = SI_SNR()
-    model.load_weights(weights_dir)
-
-    _, _,  test_set = build_datasets(config.DATA_DIR, hparams)
+    model = UNet().double().to(config.device)
+    model.load_state_dict(torch.load(weights_path))
+    model.eval()
     
-    batch_score = []
-    for batch in test_set:
-        noisy_speech, clean_speech = batch[0], batch[1]
-        pred_speech = model(noisy_speech, training=False)
-        
-        metric.update_state(clean_speech, pred_speech)
-        batch_score.append(metric.result().numpy())
+    _, _,  test_dl = build_dataloaders(config.DATA_DIR, hparams)
+    
+    with torch.no_grad():
+        for n, batch in enumerate(tqdm(test_dl)):
+            noisy_speech, clean_speech = batch["noisy"].to(config.device), batch["speech"].to(config.device)
 
-    score = {"si-snr": float(np.mean(batch_score))}
+            enhanced_speech = model(noisy_speech)
+            snr_metric = si_snr_metric(enhanced_speech, clean_speech)
+            score += ((1./(n+1))*(snr_metric-score))
+
+            nsr_loss = si_nsr_loss(enhanced_speech, clean_speech)
+            loss += ((1./(n+1))*(nsr_loss-loss))
+        
+    score = {"si-snr": float(loss.item())}
     print(f'\n SI_SNR = {score["si-snr"]} dB')
 
     with open(output_path, "w") as fp:

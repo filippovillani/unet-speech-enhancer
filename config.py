@@ -1,9 +1,10 @@
 from pathlib import Path
 from argparse import Namespace
 import os
+import torch 
 
 def create_hparams():
-    hparams = Namespace(batch_size = 16,
+    hparams = Namespace(batch_size = 4,
                         epochs = 50,
                         patience = 20,
                         lr = 1e-3,
@@ -23,6 +24,7 @@ def create_hparams():
     
     return hparams
 
+device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
 MAIN_DIR = Path(__file__).parent
 DATA_DIR = MAIN_DIR / "data"

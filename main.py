@@ -25,8 +25,7 @@ if __name__ == "__main__":
     parser_train = subparsers.add_parser('train', help='Train the model')
     parser_train.add_argument('experiment_name', 
                               type=str, 
-                              help='Choose a name for your experiment', 
-                              default='unet0')
+                              help='Choose a name for your experiment') 
     parser_train.add_argument('--weights_dir', 
                               type=str, 
                               help='If you want to restart the training, specify the weigths location',
