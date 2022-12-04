@@ -1,7 +1,7 @@
 import os
 import json
 
-import tensorflow as tf
+import torch
 import numpy as np
 from time import time
 from tqdm import tqdm
