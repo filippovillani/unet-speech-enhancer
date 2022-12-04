@@ -10,8 +10,8 @@ def create_hparams():
                         sr = 16000,
                         n_mels = 96,
                         n_fft = 1024,
-                        hop_len = 259,
-                        audio_ms = 4000,
+                        hop_len = 256,
+                        audio_ms = 4080,
                         min_noise_ms = 1000,
                         num_channels = 1)
     

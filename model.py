@@ -40,6 +40,7 @@ class UNet(nn.Module):
 
         self.convC41 = nn.Conv2d(256, 512, 3, padding='same')
         nn.init.kaiming_normal_(self.convC41.weight)
+        self.bnC41 = nn.BatchNorm2d(512)
         self.reluC41 = nn.ReLU() 
         self.convC42 = nn.Conv2d(512, 512, 3, padding='same')
         nn.init.kaiming_normal_(self.convC42.weight)
@@ -50,7 +51,7 @@ class UNet(nn.Module):
   
         self.convC51 = nn.Conv2d(512, 1024, 3, padding='same')
         nn.init.kaiming_normal_(self.convC51.weight)
-        self.bnC51 = nn.BatchNorm2d(512)
+        self.bnC51 = nn.BatchNorm2d(1024)
         self.reluC51 = nn.ReLU() 
         self.convC52 = nn.Conv2d(1024, 512, 3, padding='same')
         nn.init.kaiming_normal_(self.convC52.weight)
@@ -64,9 +65,9 @@ class UNet(nn.Module):
         nn.init.kaiming_normal_(self.convE41.weight)
         self.bnE41 = nn.BatchNorm2d(512)
         self.reluE41 = nn.ReLU() 
-        self.convE42 = nn.Conv2d(512, 512, 3, padding='same')
+        self.convE42 = nn.Conv2d(512, 256, 3, padding='same')
         nn.init.kaiming_normal_(self.convE42.weight)
-        self.bnE42 = nn.BatchNorm2d(512)
+        self.bnE42 = nn.BatchNorm2d(256)
         self.reluE42 = nn.ReLU() 
         self.dropE4 = nn.Dropout(0.3)
         
@@ -75,28 +76,28 @@ class UNet(nn.Module):
         nn.init.kaiming_normal_(self.convE31.weight)
         self.bnE31 = nn.BatchNorm2d(256)
         self.reluE31 = nn.ReLU() 
-        self.convE32 = nn.Conv2d(256, 256, 3, padding='same')
+        self.convE32 = nn.Conv2d(256, 128, 3, padding='same')
         nn.init.kaiming_normal_(self.convE32.weight)
-        self.bnE32 = nn.BatchNorm2d(256)
+        self.bnE32 = nn.BatchNorm2d(128)
         self.reluE32 = nn.ReLU() 
         self.dropE3 = nn.Dropout(0.3)
         
         self.upsamp2 = nn.Upsample(scale_factor=2, mode='bilinear', align_corners=True)
-        self.convE21 = nn.Conv2d(256, 128, 3, padding='same')
+        self.convE21 = nn.Conv2d(256, 64, 3, padding='same')
         nn.init.kaiming_normal_(self.convE21.weight)
-        self.bnE21 = nn.BatchNorm2d(128)
-        self.relu21 = nn.ReLU() 
-        self.convE22 = nn.Conv2d(128, 128, 3, padding='same')
+        self.bnE21 = nn.BatchNorm2d(64)
+        self.reluE21 = nn.ReLU() 
+        self.convE22 = nn.Conv2d(64, 64, 3, padding='same')
         nn.init.kaiming_normal_(self.convE22.weight)
-        self.bnE22 = nn.BatchNorm2d(128)
+        self.bnE22 = nn.BatchNorm2d(64)
         self.reluE22 = nn.ReLU() 
         self.dropE2 = nn.Dropout(0.3)
 
         self.upsamp1 = nn.Upsample(scale_factor=2, mode='bilinear', align_corners=True)
         self.convE11 = nn.Conv2d(128, 64, 3, padding='same')
         nn.init.kaiming_normal_(self.convE11.weight)
-        self.bnE11 = nn.BatchNorm2d(128)
-        self.relu11 = nn.ReLU() 
+        self.bnE11 = nn.BatchNorm2d(64)
+        self.reluE11 = nn.ReLU() 
         self.convE12 = nn.Conv2d(64, 64, 3, padding='same')
         nn.init.kaiming_normal_(self.convE12.weight)
         self.bnE12 = nn.BatchNorm2d(64)
@@ -109,7 +110,7 @@ class UNet(nn.Module):
         self.sigmoid = nn.Sigmoid()
         
     
-    def call(self, x):
+    def forward(self, x):
         x = self.convC11(x)
         x = self.bnC11(x)        
         x = self.reluC11(x)        
@@ -166,10 +167,10 @@ class UNet(nn.Module):
         x = self.reluE42(x)
         x = self.dropE4(x)
 
-        x = self.upsamp3(x)
-        x = torch.cat((x_cat3, x), dim=1)
-        x = self.convE31(x)
-        x = self.bnE31(x)
+        x_ = self.upsamp3(x) # torch.Size([16, 512, 24, 64])
+        x = torch.cat((x_cat3, x_), dim=1) #torch.Size([16, 768, 24, 64])
+        x = self.convE31(x) 
+        x = self.bnE31(x) 
         x = self.reluE31(x)
         x = self.convE32(x)
         x = self.bnE32(x)
@@ -212,7 +213,7 @@ class UNet(nn.Module):
         return model    
     
 if __name__ == "__main__":
-    ao = torch.zeros((16, 96, 248, 1))
+    ao = torch.zeros((16, 96, 256, 1))
     ao = torch.permute(ao, (0, 3, 1, 2))
-    model = unet()
+    model = UNet()
     ao_out = model(ao)
