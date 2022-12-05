@@ -41,14 +41,14 @@ if __name__ == "__main__":
     parser_predict.add_argument('--weights_dir', 
                                 type=str, 
                                 help='Directory of model weights',
-                                default='unet0')
+                                default='torchunet0')
 
     # Evaluate commands
     parser_eval = subparsers.add_parser('evaluate', help='Evaluate the model')
     parser_eval.add_argument('--weights_dir',
                             type=str, 
                             help='Directory of model weights',
-                            default='unet0')
+                            default='torchunet0')
 
     args = parser.parse_args()
     

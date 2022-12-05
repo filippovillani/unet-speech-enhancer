@@ -16,13 +16,16 @@ def build_dataloaders(data_dir: str,
     train_ds, val_ds, test_ds = random_split(ds, [0.7, 0.15, 0.15], generator=torch.Generator().manual_seed(42))
     train_dl = DataLoader(train_ds, 
                           hparams.batch_size, 
-                          shuffle=True)
+                          shuffle=True, 
+                          pin_memory=True)
     val_dl = DataLoader(val_ds, 
                         hparams.batch_size, 
-                        shuffle=False)
+                        shuffle=False,
+                        pin_memory=True)
     test_dl = DataLoader(test_ds, 
                          hparams.batch_size, 
-                         shuffle=False)
+                         shuffle=False,
+                         pin_memory=True)
     return train_dl, val_dl, test_dl
 
 class NoisySpeechDataset(Dataset):
