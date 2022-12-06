@@ -11,10 +11,10 @@ def create_hparams():
                         sr = 16000,
                         n_mels = 96,
                         n_fft = 1024,
+                        n_channels = 1,
                         hop_len = 256,
                         audio_ms = 4080,
-                        min_noise_ms = 1000,
-                        num_channels = 1)
+                        min_noise_ms = 1000)
     
     audio_len_ = int(hparams.sr * hparams.audio_ms / 1000)
     frame_len_ = int(audio_len_ // hparams.hop_len + 1)
