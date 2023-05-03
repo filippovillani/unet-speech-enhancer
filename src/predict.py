@@ -5,8 +5,8 @@ import librosa
 
 import config
 from model import UNet
-from utils import melspectrogram, inverse_spectrogram
-from save_plots import plot_spectrograms
+from utils.audioutils import melspectrogram, inverse_spectrogram
+from utils.plots import plot_spectrograms
 
 def predict(args):
     # TODO: to pytorch

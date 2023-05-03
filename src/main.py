@@ -1,15 +1,16 @@
 import argparse
 
 import config
-from training import train_model
+from train import Trainer
 from predict import predict
 from evaluate import evaluate
 
+# TODO: change everything
     
 def main(args):
     hparams = config.create_hparams()
     if args.subparser == "train":
-        train_model(args, hparams)
+        Trainer(args)
     elif args.subparser == "predict":
         predict(args)
     elif args.subparser == "evaluate":
@@ -23,7 +24,7 @@ if __name__ == "__main__":
     
     # Train commands
     parser_train = subparsers.add_parser('train', help='Train the model')
-    parser_train.add_argument('experiment_name', 
+    parser_train.add_argument('--experiment_name', 
                               type=str, 
                               help='Choose a name for your experiment') 
     parser_train.add_argument('--weights_dir', 
