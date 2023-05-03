@@ -7,7 +7,8 @@ from torch.utils.data import Dataset, DataLoader, random_split
 from argparse import Namespace
 from typing import Tuple
 
-from utils import melspectrogram, signal_power
+from utils import signal_power, standardization, to_db, normalize_db_spectr
+
 
 def build_dataloaders(data_dir: str, 
                       hparams: Namespace)->Tuple[Dataset, Dataset, Dataset]: 
@@ -28,6 +29,7 @@ def build_dataloaders(data_dir: str,
                          pin_memory=True)
     return train_dl, val_dl, test_dl
 
+
 class NoisySpeechDataset(Dataset):
     def __init__(self, 
                  data_dir: str,
@@ -37,6 +39,9 @@ class NoisySpeechDataset(Dataset):
         self.data_dir = data_dir
         self.hprms = hparams
         self.df = self._build_noisy_speech_dfs()
+        self.melfb = torch.as_tensor(librosa.filters.mel(sr = self.hprms.sr, 
+                                                         n_fft = self.hprms.n_fft, 
+                                                         n_mels = self.hprms.n_mels)).to(self.hprms.device)
     
     
     def _build_noisy_speech_dfs(self):
@@ -197,21 +202,29 @@ class NoisySpeechDataset(Dataset):
         noisy_speech, speech = self._generate_noisy_speech(speech, noise, seed=seed)
         
         # Zero mean, unitary variance normalization
-        speech = (speech - speech.mean()) / speech.std()
-        noisy_speech = (noisy_speech - noisy_speech.mean()) / noisy_speech.std()
+        speech = torch.as_tensor(standardization(speech))
+        noisy_speech = torch.as_tensor(standardization(noisy_speech))
+        
+        speech_stft = torch.stft(speech,
+                                 n_fft=self.hprms.n_fft,
+                                 hop_length=self.hprms.hop_len,
+                                 window = torch.hann_window(self.hprms.n_fft),
+                                 return_complex=True)
+        
+        noisy_speech_stft = torch.stft(noisy_speech,
+                                       n_fft=self.hprms.n_fft,
+                                       hop_length=self.hprms.hop_len,
+                                       window = torch.hann_window(self.hprms.n_fft),
+                                       return_complex=True)
         
         # Spectrograms and convert to torch.tensor
-        data["noisy"] = torch.tensor(melspectrogram(noisy_speech, 
-                                                    sr=self.hprms.sr, 
-                                                    n_mels=self.hprms.n_mels, 
-                                                    n_fft = self.hprms.n_fft, 
-                                                    hop_len = self.hprms.hop_len)).unsqueeze(0)
+        data["speech"] = normalize_db_spectr(to_db(torch.matmul(self.melfb, 
+                                                                (torch.abs(speech_stft)**2).float()), 
+                                                   power_spectr=True)).unsqueeze(0)
         
-        data["speech"] = torch.tensor(melspectrogram(speech, 
-                                                     sr=self.hprms.sr, 
-                                                     n_mels=self.hprms.n_mels, 
-                                                     n_fft = self.hprms.n_fft, 
-                                                     hop_len = self.hprms.hop_len)).unsqueeze(0)
+        data["noisy"] = normalize_db_spectr(to_db(torch.matmul(self.melfb, 
+                                                               (torch.abs(noisy_speech_stft)**2).float()),
+                                                  power_spectr=True)).unsqueeze(0)
             
         return data
     
