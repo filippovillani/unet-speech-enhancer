@@ -7,8 +7,7 @@ from torch.utils.data import Dataset, DataLoader, random_split
 from argparse import Namespace
 from typing import Tuple
 
-from utils import signal_power, standardization, to_db, normalize_db_spectr
-
+from utils.audioutils import signal_power, standardization, to_db, normalize_db_spectr
 
 def build_dataloaders(data_dir: str, 
                       hparams: Namespace)->Tuple[Dataset, Dataset, Dataset]: 
