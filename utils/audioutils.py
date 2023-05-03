@@ -1,20 +1,38 @@
+import torch
 import numpy as np
-import librosa 
+import librosa
+
+
+def to_db(spectrogram, power_spectr = False, min_db = -80):
+    scale = 10 if power_spectr else 20
+    spec_max = torch.max(spectrogram)
+    spec_db = torch.clamp(scale * torch.log10(spectrogram / spec_max + 1e-12), min=min_db, max=0)
+    return spec_db
+
+
+def to_linear(spectrogram_db):
+    spec_lin = torch.pow(10, spectrogram_db / 20)
+    return spec_lin
+
+
+def normalize_db_spectr(spectrogram):
+    return (spectrogram / 80) + 1
+
+
+def denormalize_db_spectr(spectrogram):
+    return (spectrogram - 1) * 80
+
+def min_max_normalization(x_wav):
+    if isinstance(x_wav, torch.Tensor):
+        x_wav = (x_wav - torch.min(x_wav)) / (torch.max(x_wav) - torch.min(x_wav))
+    if isinstance(x_wav, np.ndarray):
+        x_wav = (x_wav - np.min(x_wav)) / (np.max(x_wav) - np.min(x_wav))
+    return x_wav
+
+def standardization(x_wav):
+    return (x_wav - x_wav.mean()) / (x_wav.std() + 1e-12)
 
 def signal_power(signal):
-    """
-    Computes the signal power
-
-    Parameters
-    ----------
-    signal : np.ndarray
-
-    Returns
-    -------
-    power : np.float
-        The signal power.
-
-    """
     
     power = np.mean((np.abs(signal))**2)
     return power
@@ -24,7 +42,7 @@ def melspectrogram(audio: np.ndarray,
                    sr: int = 16000,
                    n_mels: int = 96, 
                    n_fft: int = 1024, 
-                   hop_len: int = 259)->np.ndarray:
+                   hop_len: int = 256)->np.ndarray:
     
     melspectrogram = librosa.power_to_db(librosa.feature.melspectrogram(y=audio,
                                                                         sr = sr, 
@@ -38,7 +56,7 @@ def melspectrogram(audio: np.ndarray,
 def inverse_spectrogram(melspectrogram: np.ndarray, 
                         sr: int = 16000, 
                         n_fft: int = 1024, 
-                        hop_len: int = 259, 
+                        hop_len: int = 256, 
                         n_iter:int = 512)->np.ndarray:
     """
     Computes the waveform of an audio given its melspectrogram through Griffin-Lim Algorithm
@@ -53,7 +71,7 @@ def inverse_spectrogram(melspectrogram: np.ndarray,
     n_fft : int, optional
         FFT length. The default is 1024.
     hop_len : int, optional
-        Number of samples between successive frames.. The default is 259.
+        Number of samples between successive frames.. The default is 256.
     n_iter : int, optional
         Number of iterations for the algorithm. The default is 512.
 
@@ -72,4 +90,3 @@ def inverse_spectrogram(melspectrogram: np.ndarray,
                                                                hop_length = hop_len, 
                                                                n_iter = n_iter)
     return inverse_spectrogram
-

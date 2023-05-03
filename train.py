@@ -11,9 +11,9 @@ import config
 from dataset import build_dataloaders
 from metrics import SI_SSDR
 from model import UNet
-from save_plots import plot_train_hist
-from utils import (denormalize_db_spectr, load_config, load_json, save_config,
-                   save_json, to_linear)
+from utils.plots import plot_train_hist
+from utils.audioutils import (denormalize_db_spectr, to_linear)
+from utils.utils import (load_config, load_json, save_config, save_json)
 
 
 class Trainer:
