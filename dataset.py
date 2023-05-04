@@ -17,15 +17,15 @@ def build_dataloaders(data_dir: str,
     train_dl = DataLoader(train_ds, 
                           hparams.batch_size, 
                           shuffle=True, 
-                          pin_memory=True)
+                          pin_memory=False)
     val_dl = DataLoader(val_ds, 
                         hparams.batch_size, 
                         shuffle=False,
-                        pin_memory=True)
+                        pin_memory=False)
     test_dl = DataLoader(test_ds, 
                          hparams.batch_size, 
                          shuffle=False,
-                         pin_memory=True)
+                         pin_memory=False)
     return train_dl, val_dl, test_dl
 
 
@@ -208,13 +208,13 @@ class NoisySpeechDataset(Dataset):
                                  n_fft=self.hprms.n_fft,
                                  hop_length=self.hprms.hop_len,
                                  window = torch.hann_window(self.hprms.n_fft),
-                                 return_complex=True)
+                                 return_complex=True).to(self.hprms.device)
         
         noisy_speech_stft = torch.stft(noisy_speech,
                                        n_fft=self.hprms.n_fft,
                                        hop_length=self.hprms.hop_len,
                                        window = torch.hann_window(self.hprms.n_fft),
-                                       return_complex=True)
+                                       return_complex=True).to(self.hprms.device)
         
         # Spectrograms and convert to torch.tensor
         data["speech"] = normalize_db_spectr(to_db(torch.matmul(self.melfb, 

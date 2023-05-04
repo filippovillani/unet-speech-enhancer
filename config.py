@@ -14,29 +14,24 @@ def create_hparams():
     
     training_hparams = Namespace(batch_size = 1,
                                  lr = 1e-4,
-                                 weights_decay = None,
+                                 weights_decay = 1e-4,
                                  epochs = 30,
                                  patience = 10,
                                  lr_patience = 3,
-                                 loss = "l1", # can be one of ["l1", "complexmse", "mse", "frobenius"]
-                                 max_snr_db = 12,
-                                 min_snr_db = -6) 
+                                 loss = "mse", # can be one of ["l1", "complexmse", "mse", "frobenius"]
+                                 max_snr_db = 5,
+                                 min_snr_db = -5) 
                                  
     model_hparams = Namespace(first_unet_channel_units = 32,
                               unet_kernel_size = (3,3),
-                              drop_rate = 0.1,
-                              conv_channels = [32, 64, 128],
-                              conv_kernel_size = (5,3),
-                              degli_hidden_channels = 64,
-                              degli_kernel_size = (5,3),
-                              degli_data_lr = 1e-6)
+                              drop_rate = 0)
     
     audio_hparams = Namespace(sr = 16000,
                               n_mels = 80,
                               n_fft = 1024,
                               n_channels = 1,
                               hop_len = 256,
-                              audio_ms = 1020, #4080
+                              audio_ms = 2040, #4080
                               audio_thresh = 0.1,
                               min_noise_ms = 1000)
     # Other useful audio parameters
@@ -69,7 +64,7 @@ set_seeds(SEED)
 
 # Directories
 MAIN_DIR = Path(__file__).parent
-sys.path.append(MAIN_DIR)
+sys.path.insert(0, str(MAIN_DIR))
 
 DATA_DIR = MAIN_DIR / "data"
 WEIGHTS_DIR = MAIN_DIR / "weights"

@@ -4,7 +4,7 @@ from tqdm import tqdm
 
 import config
 from metrics import si_nsr_loss, si_snr_metric
-from model import UNet
+from UNet.models import UNet
 from dataset import build_dataloaders
 
 def evaluate(args, hparams):

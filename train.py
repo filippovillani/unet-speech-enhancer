@@ -10,7 +10,7 @@ from tqdm import tqdm
 import config
 from dataset import build_dataloaders
 from metrics import SI_SSDR
-from model import UNet
+from UNet.models import UNet
 from utils.plots import plot_train_hist
 from utils.audioutils import (denormalize_db_spectr, to_linear)
 from utils.utils import (load_config, load_json, save_config, save_json)
@@ -27,7 +27,7 @@ class Trainer:
         self._set_hparams(args.resume_training)
         self._set_loss(self.hprms.loss)
         
-        self.model = UNet().to(self.hprms.device)
+        self.model = UNet(self.hprms).to(self.hprms.device)
         self.optimizer = torch.optim.Adam(params=self.model.parameters(),
                                           lr=self.hprms.lr)
         self.lr_sched = ReduceLROnPlateau(self.optimizer, 
@@ -37,7 +37,7 @@ class Trainer:
         self.training_state = {"epochs": 0,
                                 "patience_epochs": 0,  
                                 "best_epoch": 0,
-                                "best_epoch_score": 0,
+                                "best_epoch_score": -999,
                                 "train_hist": {},
                                 "val_hist": {}}
         
@@ -73,8 +73,12 @@ class Trainer:
                 
                 noisy_speech, clean_speech = batch["noisy"].float().to(self.hprms.device), batch["speech"].float().to(self.hprms.device)
                 enhanced_speech = self.model(noisy_speech)
+                
                 loss = self.loss_fn(enhanced_speech, clean_speech)
-    
+                if self.hprms.weights_decay is not None:
+                    l2_reg = self.l2_regularization(self.model)
+                    loss += self.hprms.weights_decay * l2_reg   
+                    
                 if (not torch.isnan(loss) and not torch.isinf(loss)): 
                     train_scores["loss"] += ((1./(n+1))*(loss-train_scores["loss"]))
     
@@ -82,7 +86,7 @@ class Trainer:
                 self.optimizer.step() 
                 
                 sdr_metric = self.sissdr(to_linear(denormalize_db_spectr(enhanced_speech)),
-                                            to_linear(denormalize_db_spectr(noisy_speech))).detach()
+                                         to_linear(denormalize_db_spectr(noisy_speech))).detach()
                 
                 if (not torch.isnan(sdr_metric) and not torch.isinf(sdr_metric)):
                     train_scores["si-ssdr"] += ((1./(n+1))*(sdr_metric-train_scores["si-ssdr"]))
@@ -91,7 +95,7 @@ class Trainer:
                 pbar.set_postfix_str(scores_to_print)
 
                 # if n == 10:
-                    # break  
+                #     break  
                  
             val_scores = self.eval_model(model = self.model, 
                                          test_dl = val_dl)
@@ -129,7 +133,6 @@ class Trainer:
                 enhanced_speech = self.model(noisy_speech)
                 
                 loss = self.loss_fn(enhanced_speech, clean_speech)
-                    
                 test_scores["loss"] += ((1./(n+1))*(loss-test_scores["loss"]))
                 
                 sdr_metric = self.sissdr(to_linear(denormalize_db_spectr(enhanced_speech)),
@@ -144,7 +147,14 @@ class Trainer:
                  
         return test_scores  
     
+    def l2_regularization(self, model):
     
+        l2_reg = 0.
+        for param in model.parameters():
+            l2_reg += torch.linalg.norm(param)
+            
+        return l2_reg
+
     def _make_dirs(self, experiment_name, resume_training, overwrite):
         
         experiment_dir = config.RESULTS_DIR / self.experiment_name
@@ -209,7 +219,15 @@ class Trainer:
             if key not in self.training_state["val_hist"]:
                 self.training_state["val_hist"][key] = []
             self.training_state["val_hist"][key].append(value)
-            
+        
+        if val_scores["si-ssdr"] <= self.training_state["best_epoch_score"]:
+            self.training_state["patience_epochs"] += 1
+            print(f'\nBest epoch was Epoch {self.training_state["best_epoch"]}: Validation metric = {self.training_state["best_epoch_score"]}')
+        else:
+            self.training_state["patience_epochs"] = 0
+            self.training_state["best_epoch"] = self.training_state["epochs"]
+            self.training_state["best_epoch_score"] = val_scores["si-ssdr"]
+            print("Metric on validation set improved")
             
     def _save_training_state(self):
         # Save the best model
