@@ -10,7 +10,7 @@ from tqdm import tqdm
 import config
 from dataset import build_dataloaders
 from metrics import SI_SSDR
-from UNet.models import UNet
+from networks.UNet.models import UNet
 from utils.plots import plot_train_hist
 from utils.audioutils import (denormalize_db_spectr, to_linear)
 from utils.utils import (load_config, load_json, save_config, save_json)
@@ -19,6 +19,7 @@ from utils.utils import (load_config, load_json, save_config, save_json)
 class Trainer:
     def __init__(self, args):
         
+        super(Trainer, self).__init__()
         self.experiment_name = args.experiment_name
         self._make_dirs(args.experiment_name, 
                          args.resume_training,
@@ -86,7 +87,7 @@ class Trainer:
                 self.optimizer.step() 
                 
                 sdr_metric = self.sissdr(to_linear(denormalize_db_spectr(enhanced_speech)),
-                                         to_linear(denormalize_db_spectr(noisy_speech))).detach()
+                                         to_linear(denormalize_db_spectr(clean_speech))).detach()
                 
                 if (not torch.isnan(sdr_metric) and not torch.isinf(sdr_metric)):
                     train_scores["si-ssdr"] += ((1./(n+1))*(sdr_metric-train_scores["si-ssdr"]))
@@ -94,8 +95,8 @@ class Trainer:
                 scores_to_print = str({k: round(float(v), 4) for k, v in train_scores.items()})
                 pbar.set_postfix_str(scores_to_print)
 
-                # if n == 10:
-                #     break  
+                if n == 500:
+                    break  
                  
             val_scores = self.eval_model(model = self.model, 
                                          test_dl = val_dl)
@@ -142,8 +143,8 @@ class Trainer:
                 scores_to_print = str({k: round(float(v), 4) for k, v in test_scores.items()})
                 pbar.set_postfix_str(scores_to_print)
                 
-                # if n == 10:
-                #     break  
+                if n == 100:
+                    break  
                  
         return test_scores  
     
@@ -261,5 +262,5 @@ if __name__ == "__main__":
     args = parser.parse_args()
     
     trainer = Trainer(args)
-    train_dl, val_dl, _ = build_dataloaders(config.DATA_DIR, trainer.hprms) 
+    train_dl, val_dl, _ = build_dataloaders(trainer.hprms, config.DATA_DIR) 
     trainer.train(train_dl, val_dl)

@@ -18,7 +18,7 @@ def create_hparams():
                                  epochs = 30,
                                  patience = 10,
                                  lr_patience = 3,
-                                 loss = "mse", # can be one of ["l1", "complexmse", "mse", "frobenius"]
+                                 loss = "l1", # can be one of ["l1", "complexmse", "mse", "frobenius"]
                                  max_snr_db = 5,
                                  min_snr_db = -5) 
                                  
@@ -46,7 +46,7 @@ def create_hparams():
                         n_frames = n_frames_,
                         n_stft = n_stft_,
                         device = device,
-                        num_workers = 0)
+                        num_workers = 2)
     
     return hparams
 
@@ -63,8 +63,9 @@ SEED = 42
 set_seeds(SEED)
 
 # Directories
-MAIN_DIR = Path(__file__).parent
-sys.path.insert(0, str(MAIN_DIR))
+MAIN_DIR = Path(__file__).parent.parent
+sys.path.append(str(MAIN_DIR))
+sys.path.append(str(MAIN_DIR/'src'))
 
 DATA_DIR = MAIN_DIR / "data"
 WEIGHTS_DIR = MAIN_DIR / "weights"

@@ -3,7 +3,15 @@ import numpy as np
 import librosa
 
 
+def open_audio(audio_path, sr):
+    
+    audio, _ = librosa.load(audio_path, sr=sr)
+    audio = torch.as_tensor(audio)
+    audio = standardization(audio)
+    return audio
+
 def to_db(spectrogram, power_spectr = False, min_db = -80):
+    
     scale = 10 if power_spectr else 20
     spec_max = torch.max(spectrogram)
     spec_db = torch.clamp(scale * torch.log10(spectrogram / spec_max + 1e-12), min=min_db, max=0)
@@ -11,6 +19,7 @@ def to_db(spectrogram, power_spectr = False, min_db = -80):
 
 
 def to_linear(spectrogram_db):
+    
     spec_lin = torch.pow(10, spectrogram_db / 20)
     return spec_lin
 
@@ -23,6 +32,7 @@ def denormalize_db_spectr(spectrogram):
     return (spectrogram - 1) * 80
 
 def min_max_normalization(x_wav):
+    
     if isinstance(x_wav, torch.Tensor):
         x_wav = (x_wav - torch.min(x_wav)) / (torch.max(x_wav) - torch.min(x_wav))
     if isinstance(x_wav, np.ndarray):
@@ -34,7 +44,7 @@ def standardization(x_wav):
 
 def signal_power(signal):
     
-    power = np.mean((np.abs(signal))**2)
+    power = torch.mean((torch.abs(signal))**2)
     return power
 
 

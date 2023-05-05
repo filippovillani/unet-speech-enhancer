@@ -4,7 +4,7 @@ import tensorflow as tf
 import librosa 
 
 import config
-from UNet.models import UNet
+from networks.UNet.models import UNet
 from utils.audioutils import melspectrogram, inverse_spectrogram
 from utils.plots import plot_spectrograms
 
