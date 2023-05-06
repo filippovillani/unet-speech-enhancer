@@ -21,9 +21,8 @@ class Trainer:
         
         super(Trainer, self).__init__()
         self.experiment_name = args.experiment_name
-        self._make_dirs(args.experiment_name, 
-                         args.resume_training,
-                         args.overwrite)
+        self._make_dirs(args.resume_training,
+                        args.overwrite)
         self._set_paths()
         self._set_hparams(args.resume_training)
         self._set_loss(self.hprms.loss)
@@ -156,28 +155,28 @@ class Trainer:
             
         return l2_reg
 
-    def _make_dirs(self, experiment_name, resume_training, overwrite):
+    def _make_dirs(self, resume_training, overwrite):
         
-        experiment_dir = config.RESULTS_DIR / self.experiment_name
-        weights_dir = config.WEIGHTS_DIR / self.experiment_name
+        experiment_dir = config.MODELS_DIR / self.experiment_name
+        weights_dir = experiment_dir / "weights"
         
         if not os.path.exists(experiment_dir):
             os.mkdir(experiment_dir)
+            os.mkdir(weights_dir)
         else:
             if not resume_training and not overwrite:
                 raise UserWarning('To overvwrite the current experiment use the --overwrite flag')
-        
-        if not os.path.exists(weights_dir):
-            os.mkdir(weights_dir)    
+                        
             
                            
     def _set_paths(self):
         
-        experiment_dir = config.RESULTS_DIR / self.experiment_name
+        experiment_dir = config.MODELS_DIR / self.experiment_name
+        weights_dir = experiment_dir / "weights"
+        
         self.training_state_path = experiment_dir / "train_state.json"
         self.config_path = experiment_dir / 'config.json'
         
-        weights_dir = config.WEIGHTS_DIR / self.experiment_name
         self.best_weights_path = weights_dir / 'best_weights'
         self.ckpt_weights_path = weights_dir / 'ckpt_weights'
         self.ckpt_opt_path = weights_dir / 'ckpt_opt'
@@ -249,14 +248,14 @@ if __name__ == "__main__":
     parser.add_argument('--experiment_name', 
                         type=str, 
                         help='Choose a name for your experiment',
-                        default='test00') 
+                        default='test01') 
     
     parser.add_argument('--resume_training',
                         action='store_true',
                         help="use this flag if you want to restart training from a checkpoint")
     
     parser.add_argument('--overwrite',
-                        action='store_false',
+                        action='store_true',
                         help="use this flag if you want to overwrite an experiment")
     
     args = parser.parse_args()

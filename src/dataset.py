@@ -175,7 +175,6 @@ class NoisySpeechDataset(Dataset):
         data = {"noisy": [],
                 "speech": [],
                 "noisy_phasegram": [],
-                "noisy_speech_wav": [],
                 "clean_speech_wav": []}
         
         speech = open_audio(speech_path, sr=self.hprms.sr)
@@ -214,7 +213,6 @@ class NoisySpeechDataset(Dataset):
                                                   power_spectr=True)).unsqueeze(0)
         
         data["noisy_phasegram"] = torch.angle(noisy_speech_stft)
-        data["noisy_speech_wav"] = noisy_speech
         data["clean_speech_wav"] = speech
             
             

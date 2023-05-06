@@ -68,12 +68,11 @@ sys.path.append(str(MAIN_DIR))
 sys.path.append(str(MAIN_DIR/'src'))
 
 DATA_DIR = MAIN_DIR / "data"
-WEIGHTS_DIR = MAIN_DIR / "weights"
-RESULTS_DIR = MAIN_DIR / 'results'
+MODELS_DIR = MAIN_DIR / 'models'
 PREDICTION_DIR = MAIN_DIR / 'predictions'
 MIX_EX_DIR = MAIN_DIR / 'mixture_example'
 
-_dirs = [WEIGHTS_DIR, DATA_DIR, RESULTS_DIR, PREDICTION_DIR, MIX_EX_DIR]
+_dirs = [DATA_DIR, MODELS_DIR, PREDICTION_DIR, MIX_EX_DIR]
 
 for dir in _dirs:
     if not os.path.exists(dir):
