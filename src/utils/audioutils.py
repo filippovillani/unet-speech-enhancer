@@ -1,6 +1,7 @@
 import torch
 import numpy as np
 import librosa
+import soundfile as sf
 
 
 def open_audio(audio_path, sr):
@@ -9,6 +10,14 @@ def open_audio(audio_path, sr):
     audio = torch.as_tensor(audio)
     audio = standardization(audio)
     return audio
+
+def save_audio(x_wav, x_wav_path, sr = 16000):
+    
+    if isinstance(x_wav, torch.Tensor):
+        x_wav = x_wav.cpu().detach().numpy()
+    x_wav = min_max_normalization(x_wav.squeeze())
+    sf.write(x_wav_path, x_wav, sr)
+
 
 def to_db(spectrogram, power_spectr = False, min_db = -80):
     
