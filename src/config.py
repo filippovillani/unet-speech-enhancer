@@ -24,7 +24,9 @@ def create_hparams():
                                  
     model_hparams = Namespace(first_unet_channel_units = 32,
                               unet_kernel_size = (3,3),
-                              drop_rate = 0)
+                              drop_rate = 0,
+                              conv_channels = [32, 64, 128],
+                              conv_kernel_size = (5,3))
     
     audio_hparams = Namespace(sr = 16000,
                               n_mels = 80,
