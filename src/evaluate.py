@@ -81,18 +81,18 @@ class Tester:
         with torch.no_grad():
             for n, batch in enumerate(pbar):   
                 
-                noisy_speech_melspec = batch["noisy"].float().to(self.hprms.device)
-                clean_speech_melspec = batch["speech"].float().to(self.hprms.device)
-                noisy_phasegram = batch["noisy_phasegram"].float().to(self.hprms.device)
-                clean_speech_wav = batch["clean_speech_wav"].float().to(self.hprms.device).squeeze()
+                noisy_mel_db_norm = batch["noisy_mel_db_norm"].float().to(self.hprms.device)
+                speech_mel_db_norm = batch["speech_mel_db_norm"].float().to(self.hprms.device)
+                noisy_phasegram = torch.angle(batch["noisy_stft"]).float().to(self.hprms.device)
+                speech_wav = batch["speech_wav"].float().to(self.hprms.device).squeeze()
                                 
-                enh_speech_melspec = self.enh_model(noisy_speech_melspec)
+                enh_speech_melspec = self.enh_model(noisy_mel_db_norm)
                 
-                loss = self.loss_fn(enh_speech_melspec, clean_speech_melspec)
+                loss = self.loss_fn(enh_speech_melspec, speech_mel_db_norm)
                 test_scores["loss"] += ((1./(n+1))*(loss-test_scores["loss"]))
                 
                 sissdr_out = self.sissdr(to_linear(denormalize_db_spectr(enh_speech_melspec)),
-                                         to_linear(denormalize_db_spectr(clean_speech_melspec)))
+                                         to_linear(denormalize_db_spectr(speech_mel_db_norm)))
 
                 test_scores["si-ssdr"] += ((1./(n+1))*(sissdr_out-test_scores["si-ssdr"]))  
                 
@@ -105,10 +105,10 @@ class Tester:
                                              n_fft = self.hprms.n_fft,
                                              window = torch.hann_window(self.hprms.n_fft).to(enh_stft_hat.device)).squeeze()
                 
-                pesq_out = self.pesq(enh_speech_wav, clean_speech_wav[:len(enh_speech_wav)])
+                pesq_out = self.pesq(enh_speech_wav, speech_wav[:len(enh_speech_wav)])
                 test_scores["pesq"] += ((1./(n+1))*(pesq_out-test_scores["pesq"]))  
                 
-                stoi_out = self.stoi(enh_speech_wav, clean_speech_wav[:len(enh_speech_wav)])
+                stoi_out = self.stoi(enh_speech_wav, speech_wav[:len(enh_speech_wav)])
                 test_scores["stoi"] += ((1./(n+1))*(stoi_out-test_scores["stoi"])) 
                  
                 scores_to_print = str({k: round(float(v), 4) for k, v in test_scores.items()})
