@@ -4,7 +4,6 @@ import torch
 import torch.nn as nn
 from torchmetrics.audio.pesq import PerceptualEvaluationSpeechQuality
 from torchmetrics.audio.stoi import ShortTimeObjectiveIntelligibility
-from librosa.filters import mel as melfb
 from tqdm import tqdm
 
 import config
@@ -12,8 +11,7 @@ from dataset import build_dataloaders
 from metrics import SI_SSDR
 from networks.UNet.models import UNet
 from networks.PInvDAE.models import PInvDAE
-from griffinlim import fast_griffin_lim
-from utils.audioutils import denormalize_db_spectr, to_linear, min_max_normalization
+from utils.audioutils import denormalize_db_spectr, to_linear
 from utils.utils import load_config, save_json
 
 
@@ -75,7 +73,8 @@ class Tester:
         test_scores = {"loss": 0.,
                         "si-ssdr": 0.,
                         "pesq": 0.,
-                        "stoi": 0.}      
+                        "stoi": 0.,
+                        "mel2spec": self.pinvdae_name}      
           
         pbar = tqdm(test_dl, desc=f'Evaluation', postfix='[]')
         with torch.no_grad():
@@ -89,29 +88,32 @@ class Tester:
                 enh_speech_melspec = self.enh_model(noisy_mel_db_norm)
                 
                 loss = self.loss_fn(enh_speech_melspec, speech_mel_db_norm)
-                test_scores["loss"] += ((1./(n+1))*(loss-test_scores["loss"]))
+                test_scores["loss"] += ((1./(n+1))*(loss.cpu().item() - test_scores["loss"]))
                 
                 sissdr_out = self.sissdr(to_linear(denormalize_db_spectr(enh_speech_melspec)),
-                                         to_linear(denormalize_db_spectr(speech_mel_db_norm)))
+                                         to_linear(denormalize_db_spectr(speech_mel_db_norm))).cpu().item()
 
-                test_scores["si-ssdr"] += ((1./(n+1))*(sissdr_out-test_scores["si-ssdr"]))  
+                test_scores["si-ssdr"] += ((1./(n+1))*(sissdr_out-test_scores["si-ssdr"]))
                 
                 
                 enh_speech_stftspec = self.pinvdae_model(enh_speech_melspec)
                 enh_speech_stftspec = to_linear(denormalize_db_spectr(enh_speech_stftspec)).squeeze(0)
 
                 enh_stft_hat = enh_speech_stftspec * torch.exp(1j * noisy_phasegram)
+                # enh_speech_wav = fast_griffin_lim(enh_speech_stftspec,
+                #                                 n_fft = self.hprms.n_fft,
+                #                                 n_iter = 500)
                 enh_speech_wav = torch.istft(enh_stft_hat,
                                              n_fft = self.hprms.n_fft,
                                              window = torch.hann_window(self.hprms.n_fft).to(enh_stft_hat.device)).squeeze()
                 
-                pesq_out = self.pesq(enh_speech_wav, speech_wav[:len(enh_speech_wav)])
+                pesq_out = self.pesq(enh_speech_wav, speech_wav[:len(enh_speech_wav)]).item()
                 test_scores["pesq"] += ((1./(n+1))*(pesq_out-test_scores["pesq"]))  
                 
-                stoi_out = self.stoi(enh_speech_wav, speech_wav[:len(enh_speech_wav)])
+                stoi_out = self.stoi(enh_speech_wav, speech_wav[:len(enh_speech_wav)]).item()
                 test_scores["stoi"] += ((1./(n+1))*(stoi_out-test_scores["stoi"])) 
                  
-                scores_to_print = str({k: round(float(v), 4) for k, v in test_scores.items()})
+                scores_to_print = str({k: round(float(v), 4) for k, v in test_scores.items() if not isinstance(v, str)})
                 pbar.set_postfix_str(scores_to_print)
 
         save_json(test_scores, self.metrics_path)
@@ -124,10 +126,10 @@ if __name__ == "__main__":
     
     parser.add_argument('--experiment_name', 
                         type=str, 
-                        default='test00') 
+                        default='enhancer80_00') 
     parser.add_argument('--pinv', 
                         type=str, 
-                        default='pinvDAE80') 
+                        default='pinvdae80_00') 
     args = parser.parse_args()
     
     tester = Tester(args)
