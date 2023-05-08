@@ -24,10 +24,14 @@ class Tester:
         self._set_paths()
         
         self.hprms = load_config(self.config_path)
-        self.pinvdae_hprms = load_config(self.pinvdae_config_path)
         self.hprms.device = 'cuda' if torch.cuda.is_available() else 'cpu'
-        self.pinvdae_hprms.device = self.hprms.device
         self.hprms.batch_size = 1
+        
+        if self.pinvdae_name is not None:
+            self.pinvdae_hprms = load_config(self.pinvdae_config_path)
+            self.pinvdae_hprms.device = self.hprms.device
+            self.pinvdae_model = PInvDAE(self.pinvdae_hprms).to(self.pinvdae_hprms.device)
+            self.pinvdae_model.load_state_dict(torch.load(self.pinvdae_weights_path))
         
         self._set_loss(self.hprms.loss)
         self.sissdr = SI_SSDR()
@@ -37,12 +41,6 @@ class Tester:
         self.enh_model = UNet(self.hprms).to(self.hprms.device)
         self.enh_model.load_state_dict(torch.load(self.enh_weights_path))
 
-        # self.melfb = torch.as_tensor(melfb(sr = self.hprms.sr, 
-        #                                    n_fft = self.hprms.n_fft, 
-        #                                    n_mels = self.hprms.n_mels)).to(self.hprms.device)
-
-        self.pinvdae_model = PInvDAE(self.pinvdae_hprms).to(self.pinvdae_hprms.device)
-        self.pinvdae_model.load_state_dict(torch.load(self.pinvdae_weights_path))
         
     def _set_loss(self, loss: str):
    
@@ -95,9 +93,9 @@ class Tester:
 
                 test_scores["si-ssdr"] += ((1./(n+1))*(sissdr_out-test_scores["si-ssdr"]))
                 
-                
-                enh_speech_stftspec = self.pinvdae_model(enh_speech_melspec)
-                enh_speech_stftspec = to_linear(denormalize_db_spectr(enh_speech_stftspec)).squeeze(0)
+                if self.pinvdae_name is not None:
+                    enh_speech_stftspec = self.pinvdae_model(enh_speech_melspec)
+                    enh_speech_stftspec = to_linear(denormalize_db_spectr(enh_speech_stftspec)).squeeze(0)
 
                 enh_stft_hat = enh_speech_stftspec * torch.exp(1j * noisy_phasegram)
                 # enh_speech_wav = fast_griffin_lim(enh_speech_stftspec,
@@ -115,6 +113,7 @@ class Tester:
                  
                 scores_to_print = str({k: round(float(v), 4) for k, v in test_scores.items() if not isinstance(v, str)})
                 pbar.set_postfix_str(scores_to_print)
+                
 
         save_json(test_scores, self.metrics_path)
         

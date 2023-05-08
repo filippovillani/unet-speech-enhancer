@@ -23,6 +23,7 @@ def predict(args):
     pinv_weights_path = config.MODELS_DIR / args.pinv / 'weights' / 'best_weights'
     pinv_config_path = config.MODELS_DIR / args.pinv / 'config.json'
     
+    print('Loading models...')
     enh_hparams = load_config(enh_config_path)
     enh_model = UNet(enh_hparams).to(device)
     enh_model.load_state_dict(torch.load(enh_weights_path))
@@ -31,6 +32,7 @@ def predict(args):
     pinv_model = PInvDAE(pinv_hparams).to(device)
     pinv_model.load_state_dict(torch.load(pinv_weights_path))
     
+    print('Processing audio...')
     noisy_wav = open_audio(noisy_speech_path, pinv_hparams.sr)
     noisy_wav = standardization(noisy_wav)
     noisy_stft = torch.stft(noisy_wav,
@@ -57,6 +59,8 @@ def predict(args):
                                      window = torch.hann_window(pinv_hparams.n_fft).to(enh_stft.device)).squeeze()
 
     save_audio(enh_speech_wav, enh_speech_path)
+    print('Done! You can find your enhanced speech at')
+    print(enh_speech_path)
     
 if __name__ == "__main__":
 

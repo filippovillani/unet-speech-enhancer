@@ -23,7 +23,7 @@ class Trainer:
         super(Trainer, self).__init__()
         self.experiment_name = args.experiment_name
         self.model_trained = args.model
-        self.enh_weights_dir = args.enh_weights
+        self.enh_weights_dir = args.enhancer
         self._make_dirs(args.resume_training,
                         args.overwrite)
         self._set_paths()
@@ -297,7 +297,7 @@ if __name__ == "__main__":
                         choices=['enhancer', 'enhancer_hz', 'melspec2spec'],
                         default='enhancer_hz') 
 
-    parser.add_argument('--enh_weights', 
+    parser.add_argument('--enhancer', 
                         type=str, 
                         default='enhancer80_00') # default should be None
     

@@ -8,9 +8,12 @@ def griffin_lim(spectrogram: torch.Tensor,
                 n_fft: int = 1024,
                 init: str = "zeros"):
     
-    X_init_phase = initialize_phase(spectrogram, init)
-    
-    X = spectrogram * torch.exp(1j * X_init_phase)
+    if spectrogram.dtype not in [torch.complex64, torch.complex128]:
+        X_init_phase = initialize_phase(spectrogram, init)
+        X = spectrogram * torch.exp(1j * X_init_phase)
+    else:
+        X = spectrogram
+            
     for _ in range(n_iter):
         X_hat = torch.istft(X, 
                             n_fft = n_fft,
