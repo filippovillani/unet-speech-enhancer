@@ -13,7 +13,7 @@ from metrics import SI_SSDR
 from networks.UNet.models import UNet
 from networks.PInvDAE.models import PInvDAE
 from utils.plots import plot_train_hist
-from utils.audioutils import (denormalize_db_spectr, to_linear, min_max_normalization, to_db, normalize_db_spectr)
+from utils.audioutils import (denormalize_db_spectr, to_linear, to_db, normalize_db_spectr)
 from utils.utils import (load_config, load_json, save_config, save_json)
 
 
@@ -36,7 +36,7 @@ class Trainer:
             self.enh_model = UNet(self.hprms).to(self.hprms.device)
             self.enh_model.load_state_dict(torch.load(self.enh_weights_path))
             
-        elif self.model_trained == 'enhancer':
+        elif self.model_trained in ['enhancer', 'enhancer_hz']:
             self.model2train = UNet(self.hprms).to(self.hprms.device)
         
         
@@ -82,19 +82,25 @@ class Trainer:
             for n, batch in enumerate(pbar):   
                     
                 self.optimizer.zero_grad()  
-                noisy_speech = batch["noisy_mel_db_norm"].float().to(self.hprms.device) 
                 
                 if self.model_trained == 'enhancer':
                     speech = batch["speech_mel_db_norm"].float().to(self.hprms.device) # MEL SPEC
+                    noisy_speech = batch["noisy_mel_db_norm"].float().to(self.hprms.device) 
                     enhanced_speech = self.model2train(noisy_speech)
                         
+                elif self.model_trained == 'enhancer_hz':
+                    speech = normalize_db_spectr(to_db(torch.abs(batch["speech_stft"]).float().to(self.hprms.device)))
+                    noisy_speech = normalize_db_spectr(to_db(torch.abs(batch["noisy_stft"]))).float().unsqueeze(1).to(self.hprms.device) 
+                    enhanced_speech = self.model2train(noisy_speech).squeeze(1)
+                    
                 elif self.model_trained == 'melspec2spec':
                     speech = torch.abs(batch["speech_stft"]).float().to(self.hprms.device)   # STFT SPEC
+                    noisy_speech = batch["noisy_mel_db_norm"].float().to(self.hprms.device) 
                     speech = normalize_db_spectr(to_db(speech))
                     with torch.no_grad():
                         enhanced_speech = self.enh_model(noisy_speech)
                     enhanced_speech = self.model2train(enhanced_speech).squeeze(1) # VOCODER
-                    # enhanced_speech = to_linear(denormalize_db_spectr(enhanced_speech))
+
                 loss = self.loss_fn(enhanced_speech, speech)
                 if self.hprms.weights_decay is not None:
                     l2_reg = self.l2_regularization(self.model2train)
@@ -116,8 +122,8 @@ class Trainer:
                 scores_to_print = str({k: round(float(v), 4) for k, v in train_scores.items()})
                 pbar.set_postfix_str(scores_to_print)
 
-                if n == 20:
-                    break  
+                # if n == 20:
+                #     break  
                  
             val_scores = self.eval_model(val_dl)
             
@@ -152,7 +158,12 @@ class Trainer:
                 if self.model_trained == 'enhancer':
                     speech = batch["speech_mel_db_norm"].float().to(self.hprms.device) # MEL SPEC
                     enhanced_speech = self.model2train(noisy_speech) # ENHANCER
-                    
+                
+                elif self.model_trained == 'enhancer_hz':
+                    speech = normalize_db_spectr(to_db(torch.abs(batch["speech_stft"]).float().to(self.hprms.device)))
+                    noisy_speech = normalize_db_spectr(to_db(torch.abs(batch["noisy_stft"]))).float().unsqueeze(1).to(self.hprms.device) 
+                    enhanced_speech = self.model2train(noisy_speech).squeeze(1)
+                        
                 elif self.model_trained == 'melspec2spec':
                     speech = torch.abs(batch["speech_stft"]).float().to(self.hprms.device)   # STFT SPEC
                     speech = normalize_db_spectr(to_db(speech))
@@ -169,8 +180,8 @@ class Trainer:
                 scores_to_print = str({k: round(float(v), 4) for k, v in test_scores.items()})
                 pbar.set_postfix_str(scores_to_print)
                 
-                if n == 20:
-                    break  
+                # if n == 20:
+                #     break  
                  
         return test_scores  
     
@@ -279,16 +290,16 @@ if __name__ == "__main__":
     parser.add_argument('--experiment_name', 
                         type=str, 
                         help='Choose a name for your experiment',
-                        default='test02') 
+                        default='enhancerHZ_00') 
     
     parser.add_argument('--model', 
                         type=str, 
-                        choices=['enhancer', 'melspec2spec'],
-                        default='melspec2spec') 
+                        choices=['enhancer', 'enhancer_hz', 'melspec2spec'],
+                        default='enhancer_hz') 
 
     parser.add_argument('--enh_weights', 
                         type=str, 
-                        default='test00') # default should be None
+                        default='enhancer80_00') # default should be None
     
     parser.add_argument('--resume_training',
                         action='store_true',
