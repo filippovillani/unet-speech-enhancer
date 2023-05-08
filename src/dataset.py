@@ -172,11 +172,11 @@ class NoisySpeechDataset(Dataset):
         speech_path = self.timit_df[idx]
         noise_path = self.urban_df["noise_path"][noise_idx]
         
-        data = {"noisy": [],
-                "speech": [],
-                "noisy_phasegram": [],
-                "noisy_speech_wav": [],
-                "clean_speech_wav": []}
+        data = {"noisy_mel_db_norm": [],
+                "speech_mel_db_norm": [],
+                "speech_stft": [],
+                "noisy_stft": [],
+                "speech_wav": []}
         
         speech = open_audio(speech_path, sr=self.hprms.sr)
         noise = open_audio(noise_path, sr=self.hprms.sr)
@@ -199,24 +199,24 @@ class NoisySpeechDataset(Dataset):
                             window = torch.hann_window(self.hprms.n_fft),
                             return_complex=True)
         
-        noisy_speech_stft = torch.stft(noisy_speech,
+        noisy_stft = torch.stft(noisy_speech,
                                        n_fft=self.hprms.n_fft,
                                        hop_length=self.hprms.hop_len,
                                        window = torch.hann_window(self.hprms.n_fft),
                                        return_complex=True)
         
-        data["speech"] = normalize_db_spectr(to_db(torch.matmul(self.melfb, 
+        
+        data["speech_mel_db_norm"] = normalize_db_spectr(to_db(torch.matmul(self.melfb, 
                                                         (torch.abs(speech_stft)**2).float()), 
                                             power_spectr=True)).unsqueeze(0)
         
-        data["noisy"] = normalize_db_spectr(to_db(torch.matmul(self.melfb, 
-                                                               (torch.abs(noisy_speech_stft)**2).float()),
+        data["noisy_mel_db_norm"] = normalize_db_spectr(to_db(torch.matmul(self.melfb, 
+                                                               (torch.abs(noisy_stft)**2).float()),
                                                   power_spectr=True)).unsqueeze(0)
         
-        data["noisy_phasegram"] = torch.angle(noisy_speech_stft)
-        data["noisy_speech_wav"] = noisy_speech
-        data["clean_speech_wav"] = speech
-            
+        data["speech_stft"] = speech_stft
+        data["noisy_stft"] = noisy_stft
+        data["speech_wav"] = speech
             
         return data
     

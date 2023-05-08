@@ -14,7 +14,7 @@ def griffin_lim(spectrogram: torch.Tensor,
     for _ in range(n_iter):
         X_hat = torch.istft(X, 
                             n_fft = n_fft,
-                            window = torch.hann_window(1024).to(X.device))    # G+ cn
+                            window = torch.hann_window(n_fft).to(X.device))    # G+ cn
         X_hat = torch.stft(X_hat, 
                            n_fft=n_fft, 
                            return_complex = True,
@@ -24,7 +24,7 @@ def griffin_lim(spectrogram: torch.Tensor,
     
     x = torch.istft(X, 
                     n_fft = n_fft,
-                    window = torch.hann_window(1024).to(X.device))
+                    window = torch.hann_window(n_fft).to(X.device))
     
     return x
 
@@ -71,7 +71,7 @@ def fast_griffin_lim(spectrogram: torch.Tensor,
 
     x = torch.istft(X, 
                     n_fft = n_fft,
-                    window = torch.hann_window(1024).to(X.device))
+                    window = torch.hann_window(n_fft).to(X.device))
 
     return x
 

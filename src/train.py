@@ -11,8 +11,9 @@ import config
 from dataset import build_dataloaders
 from metrics import SI_SSDR
 from networks.UNet.models import UNet
+from networks.PInvDAE.models import PInvDAE
 from utils.plots import plot_train_hist
-from utils.audioutils import (denormalize_db_spectr, to_linear)
+from utils.audioutils import (denormalize_db_spectr, to_linear, to_db, normalize_db_spectr)
 from utils.utils import (load_config, load_json, save_config, save_json)
 
 
@@ -21,33 +22,43 @@ class Trainer:
         
         super(Trainer, self).__init__()
         self.experiment_name = args.experiment_name
-        self._make_dirs(args.experiment_name, 
-                         args.resume_training,
-                         args.overwrite)
+        self.model_trained = args.model
+        self.enh_weights_dir = args.enh_weights
+        self._make_dirs(args.resume_training,
+                        args.overwrite)
         self._set_paths()
-        self._set_hparams(args.resume_training)
-        self._set_loss(self.hprms.loss)
+        self.hprms = self._get_hparams(args.resume_training)
+        self.loss_fn = self._get_loss_fn(self.hprms.loss)
         
-        self.model = UNet(self.hprms).to(self.hprms.device)
-        self.optimizer = torch.optim.Adam(params=self.model.parameters(),
+        
+        if self.model_trained == 'melspec2spec':
+            self.model2train = PInvDAE(self.hprms).to(self.hprms.device)
+            self.enh_model = UNet(self.hprms).to(self.hprms.device)
+            self.enh_model.load_state_dict(torch.load(self.enh_weights_path))
+            
+        elif self.model_trained in ['enhancer', 'enhancer_hz']:
+            self.model2train = UNet(self.hprms).to(self.hprms.device)
+        
+        
+        self.optimizer = torch.optim.Adam(params=self.model2train.parameters(),
                                           lr=self.hprms.lr)
         self.lr_sched = ReduceLROnPlateau(self.optimizer, 
                                           factor=0.5, 
                                           patience=self.hprms.lr_patience)
         
-        self.training_state = {"epochs": 0,
-                                "patience_epochs": 0,  
-                                "best_epoch": 0,
-                                "best_epoch_score": -999,
-                                "train_hist": {},
-                                "val_hist": {}}
-        
         if args.resume_training:
-            self.model.load_state_dict(torch.load(self.ckpt_weights_path))
+            self.model2train.load_state_dict(torch.load(self.ckpt_weights_path))
             self.optimizer.load_state_dict(torch.load(self.ckpt_opt_path))
             self.lr_sched.load_state_dict(torch.load(self.ckpt_sched_path))
             self.training_state = load_json(self.training_state_path) 
-       
+        else:
+            self.training_state = {"epochs": 0,
+                                    "patience_epochs": 0,  
+                                    "best_epoch": 0,
+                                    "best_epoch_score": -999,
+                                    "train_hist": {},
+                                    "val_hist": {}}
+            
         self.sissdr = SI_SSDR()
     
     
@@ -62,7 +73,7 @@ class Trainer:
             self.training_state["epochs"] += 1 
             print(f'\n§ Train Epoch: {self.training_state["epochs"]}\n')
             
-            self.model.train()
+            self.model2train.train()
             train_scores = {"loss": 0.,
                             "si-ssdr": 0.}
             start_epoch = time()        
@@ -72,12 +83,27 @@ class Trainer:
                     
                 self.optimizer.zero_grad()  
                 
-                noisy_speech, clean_speech = batch["noisy"].float().to(self.hprms.device), batch["speech"].float().to(self.hprms.device)
-                enhanced_speech = self.model(noisy_speech)
-                
-                loss = self.loss_fn(enhanced_speech, clean_speech)
+                if self.model_trained == 'enhancer':
+                    speech = batch["speech_mel_db_norm"].float().to(self.hprms.device) # MEL SPEC
+                    noisy_speech = batch["noisy_mel_db_norm"].float().to(self.hprms.device) 
+                    enhanced_speech = self.model2train(noisy_speech)
+                        
+                elif self.model_trained == 'enhancer_hz':
+                    speech = normalize_db_spectr(to_db(torch.abs(batch["speech_stft"]).float().to(self.hprms.device)))
+                    noisy_speech = normalize_db_spectr(to_db(torch.abs(batch["noisy_stft"]))).float().unsqueeze(1).to(self.hprms.device) 
+                    enhanced_speech = self.model2train(noisy_speech).squeeze(1)
+                    
+                elif self.model_trained == 'melspec2spec':
+                    speech = torch.abs(batch["speech_stft"]).float().to(self.hprms.device)   # STFT SPEC
+                    noisy_speech = batch["noisy_mel_db_norm"].float().to(self.hprms.device) 
+                    speech = normalize_db_spectr(to_db(speech))
+                    with torch.no_grad():
+                        enhanced_speech = self.enh_model(noisy_speech)
+                    enhanced_speech = self.model2train(enhanced_speech).squeeze(1) # VOCODER
+
+                loss = self.loss_fn(enhanced_speech, speech)
                 if self.hprms.weights_decay is not None:
-                    l2_reg = self.l2_regularization(self.model)
+                    l2_reg = self.l2_regularization(self.model2train)
                     loss += self.hprms.weights_decay * l2_reg   
                     
                 if (not torch.isnan(loss) and not torch.isinf(loss)): 
@@ -86,8 +112,9 @@ class Trainer:
                 loss.backward()  
                 self.optimizer.step() 
                 
+                # remove to_linear and denormalize for melspec2spec
                 sdr_metric = self.sissdr(to_linear(denormalize_db_spectr(enhanced_speech)),
-                                         to_linear(denormalize_db_spectr(clean_speech))).detach()
+                                         to_linear(denormalize_db_spectr(speech))).detach()
                 
                 if (not torch.isnan(sdr_metric) and not torch.isinf(sdr_metric)):
                     train_scores["si-ssdr"] += ((1./(n+1))*(sdr_metric-train_scores["si-ssdr"]))
@@ -95,14 +122,12 @@ class Trainer:
                 scores_to_print = str({k: round(float(v), 4) for k, v in train_scores.items()})
                 pbar.set_postfix_str(scores_to_print)
 
-                if n == 500:
-                    break  
+                # if n == 20:
+                #     break  
                  
-            val_scores = self.eval_model(model = self.model, 
-                                         test_dl = val_dl)
+            val_scores = self.eval_model(val_dl)
             
             self.lr_sched.step(val_scores["si-ssdr"])
-            
             self._update_training_state(train_scores, val_scores)
             self._save_training_state()
             plot_train_hist(self.training_state_path)
@@ -119,32 +144,44 @@ class Trainer:
              
              
     def eval_model(self,
-                   model: torch.nn.Module, 
                    test_dl: DataLoader)->dict:
 
-        model.eval()
+        self.model2train.eval()
 
         test_scores = {"loss": 0.,
                         "si-ssdr": 0.}        
         pbar = tqdm(test_dl, desc=f'Evaluation', postfix='[]')
         with torch.no_grad():
             for n, batch in enumerate(pbar):   
+                noisy_speech = batch["noisy_mel_db_norm"].float().to(self.hprms.device) 
                 
-                noisy_speech, clean_speech = batch["noisy"].float().to(self.hprms.device), batch["speech"].float().to(self.hprms.device)
-                enhanced_speech = self.model(noisy_speech)
+                if self.model_trained == 'enhancer':
+                    speech = batch["speech_mel_db_norm"].float().to(self.hprms.device) # MEL SPEC
+                    enhanced_speech = self.model2train(noisy_speech) # ENHANCER
                 
-                loss = self.loss_fn(enhanced_speech, clean_speech)
+                elif self.model_trained == 'enhancer_hz':
+                    speech = normalize_db_spectr(to_db(torch.abs(batch["speech_stft"]).float().to(self.hprms.device)))
+                    noisy_speech = normalize_db_spectr(to_db(torch.abs(batch["noisy_stft"]))).float().unsqueeze(1).to(self.hprms.device) 
+                    enhanced_speech = self.model2train(noisy_speech).squeeze(1)
+                        
+                elif self.model_trained == 'melspec2spec':
+                    speech = torch.abs(batch["speech_stft"]).float().to(self.hprms.device)   # STFT SPEC
+                    speech = normalize_db_spectr(to_db(speech))
+                    enhanced_speech = self.enh_model(noisy_speech)
+                    enhanced_speech = self.model2train(enhanced_speech).squeeze(1) # VOCODER
+                    
+                loss = self.loss_fn(enhanced_speech, speech)
                 test_scores["loss"] += ((1./(n+1))*(loss-test_scores["loss"]))
                 
                 sdr_metric = self.sissdr(to_linear(denormalize_db_spectr(enhanced_speech)),
-                                         to_linear(denormalize_db_spectr(clean_speech)))
+                                         to_linear(denormalize_db_spectr(speech)))
                 test_scores["si-ssdr"] += ((1./(n+1))*(sdr_metric-test_scores["si-ssdr"]))  
                  
                 scores_to_print = str({k: round(float(v), 4) for k, v in test_scores.items()})
                 pbar.set_postfix_str(scores_to_print)
                 
-                if n == 100:
-                    break  
+                # if n == 20:
+                #     break  
                  
         return test_scores  
     
@@ -156,53 +193,57 @@ class Trainer:
             
         return l2_reg
 
-    def _make_dirs(self, experiment_name, resume_training, overwrite):
+    def _make_dirs(self, resume_training, overwrite):
         
-        experiment_dir = config.RESULTS_DIR / self.experiment_name
-        weights_dir = config.WEIGHTS_DIR / self.experiment_name
+        experiment_dir = config.MODELS_DIR / self.experiment_name
+        weights_dir = experiment_dir / "weights"
         
         if not os.path.exists(experiment_dir):
             os.mkdir(experiment_dir)
+            os.mkdir(weights_dir)
         else:
             if not resume_training and not overwrite:
                 raise UserWarning('To overvwrite the current experiment use the --overwrite flag')
-        
-        if not os.path.exists(weights_dir):
-            os.mkdir(weights_dir)    
+                        
             
                            
     def _set_paths(self):
         
-        experiment_dir = config.RESULTS_DIR / self.experiment_name
+        experiment_dir = config.MODELS_DIR / self.experiment_name
+        weights_dir = experiment_dir / "weights"
+        
         self.training_state_path = experiment_dir / "train_state.json"
         self.config_path = experiment_dir / 'config.json'
         
-        weights_dir = config.WEIGHTS_DIR / self.experiment_name
         self.best_weights_path = weights_dir / 'best_weights'
         self.ckpt_weights_path = weights_dir / 'ckpt_weights'
         self.ckpt_opt_path = weights_dir / 'ckpt_opt'
         self.ckpt_sched_path = weights_dir / 'ckpt_sched'
         
+        if self.model_trained == 'melspec2spec':
+            self.enh_weights_path = config.MODELS_DIR / self.enh_weights_dir / 'weights' / 'best_weights'
         
-    def _set_hparams(self, resume_training):
+    def _get_hparams(self, resume_training):
         
         ''' Creates the hyperparameters if it's the first time,
         otherwise loads the hyperparameters from config.json '''
         
         if resume_training:
-            self.hprms = load_config(self.config_path)
+            hparams = load_config(self.config_path)
         else:
-            self.hprms = config.create_hparams()
-            save_config(self.hprms, self.config_path)
+            hparams = config.create_hparams()
+            save_config(hparams, self.config_path)
+        
+        return hparams
             
-            
-    def _set_loss(self, loss: str):
+    def _get_loss_fn(self, loss: str):
    
         if loss == "l1":
-            self.loss_fn = torch.nn.L1Loss()
+            loss_fn = torch.nn.L1Loss()
         elif loss == "mse":
-            self.loss_fn = torch.nn.MSELoss()
+            loss_fn = torch.nn.MSELoss()
         
+        return loss_fn
         
     def _update_training_state(self, train_scores, val_scores):
 
@@ -233,11 +274,11 @@ class Trainer:
     def _save_training_state(self):
         # Save the best model
         if self.training_state["patience_epochs"] == 0:
-            torch.save(self.model.state_dict(), self.best_weights_path)
+            torch.save(self.model2train.state_dict(), self.best_weights_path)
                 
         # Save checkpoint to resume training
         save_json(self.training_state, self.training_state_path)  
-        torch.save(self.model.state_dict(), self.ckpt_weights_path)
+        torch.save(self.model2train.state_dict(), self.ckpt_weights_path)
         torch.save(self.optimizer.state_dict(), self.ckpt_opt_path)
         torch.save(self.lr_sched.state_dict(), self.ckpt_sched_path)
         
@@ -249,14 +290,23 @@ if __name__ == "__main__":
     parser.add_argument('--experiment_name', 
                         type=str, 
                         help='Choose a name for your experiment',
-                        default='test00') 
+                        default='enhancerHZ_00') 
+    
+    parser.add_argument('--model', 
+                        type=str, 
+                        choices=['enhancer', 'enhancer_hz', 'melspec2spec'],
+                        default='enhancer_hz') 
+
+    parser.add_argument('--enh_weights', 
+                        type=str, 
+                        default='enhancer80_00') # default should be None
     
     parser.add_argument('--resume_training',
                         action='store_true',
                         help="use this flag if you want to restart training from a checkpoint")
     
     parser.add_argument('--overwrite',
-                        action='store_false',
+                        action='store_false', # default should be store_true
                         help="use this flag if you want to overwrite an experiment")
     
     args = parser.parse_args()

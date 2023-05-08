@@ -24,7 +24,9 @@ def create_hparams():
                                  
     model_hparams = Namespace(first_unet_channel_units = 32,
                               unet_kernel_size = (3,3),
-                              drop_rate = 0)
+                              drop_rate = 0,
+                              conv_channels = [32, 64, 128],
+                              conv_kernel_size = (5,3))
     
     audio_hparams = Namespace(sr = 16000,
                               n_mels = 80,
@@ -68,12 +70,11 @@ sys.path.append(str(MAIN_DIR))
 sys.path.append(str(MAIN_DIR/'src'))
 
 DATA_DIR = MAIN_DIR / "data"
-WEIGHTS_DIR = MAIN_DIR / "weights"
-RESULTS_DIR = MAIN_DIR / 'results'
+MODELS_DIR = MAIN_DIR / 'models'
 PREDICTION_DIR = MAIN_DIR / 'predictions'
 MIX_EX_DIR = MAIN_DIR / 'mixture_example'
 
-_dirs = [WEIGHTS_DIR, DATA_DIR, RESULTS_DIR, PREDICTION_DIR, MIX_EX_DIR]
+_dirs = [DATA_DIR, MODELS_DIR, PREDICTION_DIR, MIX_EX_DIR]
 
 for dir in _dirs:
     if not os.path.exists(dir):
