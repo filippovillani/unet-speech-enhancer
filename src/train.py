@@ -290,16 +290,16 @@ if __name__ == "__main__":
     parser.add_argument('--experiment_name', 
                         type=str, 
                         help='Choose a name for your experiment',
-                        default='enhancerHZ_00') 
+                        default='enhancer80_02') 
     
     parser.add_argument('--model', 
                         type=str, 
                         choices=['enhancer', 'enhancer_hz', 'melspec2spec'],
-                        default='enhancer_hz') 
+                        default='enhancer') 
 
     parser.add_argument('--enhancer', 
                         type=str, 
-                        default='enhancer80_00') # default should be None
+                        default=None) # default should be None
     
     parser.add_argument('--resume_training',
                         action='store_true',
