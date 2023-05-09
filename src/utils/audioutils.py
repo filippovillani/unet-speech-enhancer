@@ -15,7 +15,7 @@ def save_audio(x_wav, x_wav_path, sr = 16000):
     
     if isinstance(x_wav, torch.Tensor):
         x_wav = x_wav.cpu().detach().numpy()
-    x_wav = min_max_normalization(x_wav.squeeze())
+    x_wav = min_max_normalization(x_wav.squeeze()) * 2 - 1
     sf.write(x_wav_path, x_wav, sr)
 
 
