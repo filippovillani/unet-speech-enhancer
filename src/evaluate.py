@@ -11,7 +11,7 @@ from dataset import build_dataloaders
 from metrics import SI_SSDR
 from networks.UNet.models import UNet
 from networks.PInvDAE.models import PInvDAE
-from utils.audioutils import denormalize_db_spectr, to_linear
+from utils.audioutils import denormalize_db_spectr, to_linear, normalize_db_spectr, to_db
 from utils.utils import load_config, save_json
 
 
@@ -21,6 +21,7 @@ class Tester:
         super(Tester, self).__init__()
         self.experiment_name = args.experiment_name
         self.pinvdae_name = args.pinv
+        self.freq = args.freq
         self._set_paths()
         
         self.hprms = load_config(self.config_path)
@@ -69,7 +70,8 @@ class Tester:
         self.enh_model.eval()
 
         test_scores = {"loss": 0.,
-                        "si-ssdr": 0.,
+                        "enh-si-ssdr": 0.,
+                        "pinv-si-ssdr": 0.,
                         "pesq": 0.,
                         "stoi": 0.,
                         "mel2spec": self.pinvdae_name}      
@@ -78,32 +80,39 @@ class Tester:
         with torch.no_grad():
             for n, batch in enumerate(pbar):   
                 
-                noisy_mel_db_norm = batch["noisy_mel_db_norm"].float().to(self.hprms.device)
-                speech_mel_db_norm = batch["speech_mel_db_norm"].float().to(self.hprms.device)
                 noisy_phasegram = torch.angle(batch["noisy_stft"]).float().to(self.hprms.device)
                 speech_wav = batch["speech_wav"].float().to(self.hprms.device).squeeze()
-                                
-                enh_speech_melspec = self.enh_model(noisy_mel_db_norm)
+                speech_stft = batch["speech_stft"].to(self.hprms.device)
                 
-                loss = self.loss_fn(enh_speech_melspec, speech_mel_db_norm)
+                if self.freq == 'mel':
+                    speech = batch["speech_mel_db_norm"].float().to(self.hprms.device) # MEL SPEC
+                    noisy_speech = batch["noisy_mel_db_norm"].float().to(self.hprms.device) 
+                elif self.freq == 'hz':
+                    speech = normalize_db_spectr(to_db(torch.abs(batch["speech_stft"]).float().unsqueeze(1).to(self.hprms.device)))
+                    noisy_speech = normalize_db_spectr(to_db(torch.abs(batch["noisy_stft"]))).float().unsqueeze(1).to(self.hprms.device) 
+                                
+                enh_speech = self.enh_model(noisy_speech)
+                
+                loss = self.loss_fn(enh_speech, speech)
                 test_scores["loss"] += ((1./(n+1))*(loss.cpu().item() - test_scores["loss"]))
                 
-                sissdr_out = self.sissdr(to_linear(denormalize_db_spectr(enh_speech_melspec)),
-                                         to_linear(denormalize_db_spectr(speech_mel_db_norm))).cpu().item()
+                sissdr_out = self.sissdr(to_linear(denormalize_db_spectr(enh_speech)),
+                                         to_linear(denormalize_db_spectr(speech))).cpu().item()
 
-                test_scores["si-ssdr"] += ((1./(n+1))*(sissdr_out-test_scores["si-ssdr"]))
+                test_scores["enh-si-ssdr"] += ((1./(n+1))*(sissdr_out-test_scores["enh-si-ssdr"]))
                 
-                if self.pinvdae_name is not None:
-                    enh_speech_stftspec = self.pinvdae_model(enh_speech_melspec)
-                    enh_speech_stftspec = to_linear(denormalize_db_spectr(enh_speech_stftspec)).squeeze(0)
+                if self.freq == 'mel':
+                    enh_speech = self.pinvdae_model(enh_speech)
+                
+                enh_speech = to_linear(denormalize_db_spectr(enh_speech)).squeeze(0)
+                enh_stft_hat = enh_speech * torch.exp(1j * noisy_phasegram)
 
-                enh_stft_hat = enh_speech_stftspec * torch.exp(1j * noisy_phasegram)
-                # enh_speech_wav = fast_griffin_lim(enh_speech_stftspec,
-                #                                 n_fft = self.hprms.n_fft,
-                #                                 n_iter = 500)
                 enh_speech_wav = torch.istft(enh_stft_hat,
                                              n_fft = self.hprms.n_fft,
                                              window = torch.hann_window(self.hprms.n_fft).to(enh_stft_hat.device)).squeeze()
+                
+                sissdr_pinv = self.sissdr(enh_speech, torch.abs(speech_stft)).cpu().item()
+                test_scores["pinv-si-ssdr"] += ((1./(n+1))*(sissdr_pinv-test_scores["pinv-si-ssdr"]))  
                 
                 pesq_out = self.pesq(enh_speech_wav, speech_wav[:len(enh_speech_wav)]).item()
                 test_scores["pesq"] += ((1./(n+1))*(pesq_out-test_scores["pesq"]))  
@@ -111,10 +120,11 @@ class Tester:
                 stoi_out = self.stoi(enh_speech_wav, speech_wav[:len(enh_speech_wav)]).item()
                 test_scores["stoi"] += ((1./(n+1))*(stoi_out-test_scores["stoi"])) 
                  
-                scores_to_print = str({k: round(float(v), 4) for k, v in test_scores.items() if not isinstance(v, str)})
+                scores_to_print = str({k: round(float(v), 4) for k, v in test_scores.items() if k in ['pinv-si-ssdr', 'pesq', 'stoi']})
                 pbar.set_postfix_str(scores_to_print)
-                
-
+        
+        for k,v in test_scores.items():
+            print(f'{k} = {v}')
         save_json(test_scores, self.metrics_path)
         
         
@@ -129,6 +139,11 @@ if __name__ == "__main__":
     parser.add_argument('--pinv', 
                         type=str, 
                         default='pinvdae80_00') 
+    parser.add_argument('--freq', 
+                        type=str,
+                        choices=['mel', 'hz'],
+                        help="mel or hz model", 
+                        default='mel') 
     args = parser.parse_args()
     
     tester = Tester(args)

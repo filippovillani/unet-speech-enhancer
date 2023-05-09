@@ -67,6 +67,11 @@ if __name__ == "__main__":
                              help="Name of the directory containing the melspec2spec's weights and results.\n \
                                   Not to be used with a standard STFT enhancer",
                              default=None) 
+    parser_eval.add_argument('--freq', 
+                             type=str,
+                             choices=['mel', 'hz'],
+                             help="mel or hz model", 
+                             default='hz') 
     
     # Predict commands
     parser_predict = subparsers.add_parser('predict', 
