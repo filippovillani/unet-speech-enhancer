@@ -89,6 +89,3 @@ def initialize_phase(spectrogram, init = "zeros"):
         raise ValueError(f"init must be 'zeros' or 'random', received: {init}")
     
     return X_init_phase
-
-ao = torch.rand((513, 128), dtype=torch.complex64)
-fast_griffin_lim(ao)
