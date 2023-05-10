@@ -27,7 +27,12 @@ def create_hparams():
                               n_unet_blocks = 5,
                               drop_rate = 0,
                               conv_channels = [32, 64, 128],
-                              conv_kernel_size = (5,3))
+                              conv_kernel_size = (5,3),
+                              max_awgn_db = -12,
+                              min_awgn_db = 3,
+                              test_degli_blocks = 5,
+                              degli_hidden_channels = 64,
+                              degli_kernel_size = (3,3))
     
     audio_hparams = Namespace(sr = 16000,
                               n_mels = 80,

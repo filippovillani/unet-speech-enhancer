@@ -12,8 +12,9 @@ from dataset import build_dataloaders
 from metrics import SI_SSDR
 from networks.UNet.models import UNet
 from networks.PInvDAE.models import PInvDAE
+from networks.DeGLI.models import DeGLI
 from utils.plots import plot_train_hist
-from utils.audioutils import (denormalize_db_spectr, to_linear, to_db, normalize_db_spectr)
+from utils.audioutils import (denormalize_db_spectr, to_linear, to_db, normalize_db_spectr, create_awgn)
 from utils.utils import (load_config, load_json, save_config, save_json)
 
 
@@ -24,6 +25,8 @@ class Trainer:
         self.experiment_name = args.experiment_name
         self.model_trained = args.model
         self.enh_weights_dir = args.enhancer
+        self.melspec2spec_weights_dir = args.melspec2spec
+        
         self._make_dirs(args.resume_training,
                         args.overwrite)
         self._set_paths()
@@ -35,6 +38,14 @@ class Trainer:
             self.model2train = PInvDAE(self.hprms).to(self.hprms.device)
             self.enh_model = UNet(self.hprms).to(self.hprms.device)
             self.enh_model.load_state_dict(torch.load(self.enh_weights_path))
+        
+        elif self.model == 'degli':
+            self.model2train = DeGLI(self.hprms).to(self.hprms.device)
+            self.melspec2spec_model = PInvDAE(self.hprms).to(self.hprms.device)
+            self.melspec2spec_model.load_state_dict(torch.load(self.melspec2spec_weights_path))
+            self.enh_model = UNet(self.hprms).to(self.hprms.device)
+            self.enh_model.load_state_dict(torch.load(self.enh_weights_path))
+            
             
         elif self.model_trained in ['enhancer', 'enhancer_hz']:
             self.model2train = UNet(self.hprms).to(self.hprms.device)
@@ -101,6 +112,21 @@ class Trainer:
                         enhanced_speech = self.enh_model(noisy_speech)
                     enhanced_speech = self.model2train(enhanced_speech).squeeze(1) # VOCODER
 
+                elif self.model_trained == 'degli':
+                    speech = batch["speech_stft"].to(self.hprms.device)
+                    with torch.no_grad():
+                        enhanced_speech = self.enh_model(noisy_speech)
+                        enhanced_speech = self.melspec2spec_model(enhanced_speech) 
+                        
+                        enhanced_speech = enhanced_speech * torch.exp(1j * torch.angle(speech))
+                        noise = create_awgn(enhanced_speech, 
+                                            max_snr_db = self.hprms.max_awgn_db,
+                                            min_snr_db = self.hprms.min_awgn_db)
+                        enhanced_awgn_speech = enhanced_speech + noise
+                        
+                    enhanced_speech = self.model2train(enhanced_awgn_speech, torch.abs(enhanced_speech)).squeeze(1)
+
+                    
                 loss = self.loss_fn(enhanced_speech, speech)
                 if self.hprms.weights_decay is not None:
                     l2_reg = self.l2_regularization(self.model2train)
@@ -169,7 +195,10 @@ class Trainer:
                     speech = normalize_db_spectr(to_db(speech))
                     enhanced_speech = self.enh_model(noisy_speech)
                     enhanced_speech = self.model2train(enhanced_speech).squeeze(1) # VOCODER
-                    
+                # TODO:
+                elif self.model_trained == 'degli':
+                    speech = batch["speech_stft"].to(self.hprms.device)
+                        
                 loss = self.loss_fn(enhanced_speech, speech)
                 test_scores["loss"] += ((1./(n+1))*(loss-test_scores["loss"]))
                 
@@ -222,6 +251,9 @@ class Trainer:
         
         if self.model_trained == 'melspec2spec':
             self.enh_weights_path = config.MODELS_DIR / self.enh_weights_dir / 'weights' / 'best_weights'
+        elif self.model_trained == 'degli':
+            self.enh_weights_path = config.MODELS_DIR / self.enh_weights_dir / 'weights' / 'best_weights'
+            self.melspec2spec_weights_path = config.MODELS_DIR / self.melspec2spec_weights_dir / 'weights' / 'best_weights'
         
     def _get_hparams(self, resume_training):
         
@@ -288,26 +320,35 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     
     parser.add_argument('--experiment_name', 
-                        type=str, 
-                        help='Choose a name for your experiment',
-                        default='enhancer80_02') 
+                              type=str, 
+                              help='Choose a name for the experiment',
+                              default='enhancerHZ_00') 
     
     parser.add_argument('--model', 
                         type=str, 
-                        choices=['enhancer', 'enhancer_hz', 'melspec2spec'],
-                        default='enhancer') 
+                        help="The model you want to train",
+                        choices=['enhancer', 'enhancer_hz', 'melspec2spec', 'degli'],
+                        default='enhancer_hz') 
 
     parser.add_argument('--enhancer', 
                         type=str, 
-                        default=None) # default should be None
+                        help="Name of the directory containing the enhancer's weights and results. \
+                            To be used only if training melspec2spec",
+                        default=None)
+
+    parser.add_argument('--melspec2spec', 
+                        type=str, 
+                        help="Name of the directory containing the melspec2spec's weights and results. \
+                            To be used only if training degli",
+                        default=None)
     
     parser.add_argument('--resume_training',
                         action='store_true',
-                        help="use this flag if you want to restart training from a checkpoint")
+                        help="Use this flag if you want to restart training from a checkpoint")
     
     parser.add_argument('--overwrite',
-                        action='store_false', # default should be store_true
-                        help="use this flag if you want to overwrite an experiment")
+                        action='store_false', # default should be true 
+                        help="Use this flag if you want to overwrite an experiment")
     
     args = parser.parse_args()
     
