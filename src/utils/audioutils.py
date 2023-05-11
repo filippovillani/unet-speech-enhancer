@@ -19,6 +19,14 @@ def save_audio(x_wav, x_wav_path, sr = 16000):
     sf.write(x_wav_path, x_wav, sr)
 
 
+def compute_wav(x_stft, n_fft):
+    
+    x_wav = torch.istft(x_stft, 
+                        n_fft = n_fft,
+                        window = torch.hann_window(n_fft).to(x_stft.device))
+    x_wav = standardization(x_wav).squeeze()
+    return x_wav
+
 def to_db(spectrogram, power_spectr = False, min_db = -80):
     
     scale = 10 if power_spectr else 20
