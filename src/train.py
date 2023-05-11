@@ -118,7 +118,7 @@ class Trainer:
                     enhanced_speech = self.model2train(enhanced_speech).squeeze(1) # VOCODER
 
                 elif self.model_trained == 'degli':
-                    self.melspec2spec_model.repetitions = 1
+                    self.model2train.repetitions = 1
                     speech = batch["speech_stft"].to(self.hprms.device)
                     noisy_speech = batch["noisy_mel_db_norm"].float().to(self.hprms.device) 
                     with torch.no_grad():
@@ -218,7 +218,7 @@ class Trainer:
                     enhanced_speech = self.model2train(enhanced_speech).squeeze(1)  
 
                 elif self.model_trained == 'degli':
-                    self.melspec2spec_model.repetitions = self.hprms.test_degli_blocks
+                    self.model2train.repetitions = 5
                     speech = batch["speech_stft"].to(self.hprms.device)
                     noisy_phasegram = torch.angle(batch["noisy_stft"]).float().to(self.hprms.device)
                     enhanced_speech = self.enh_model(noisy_speech)                  
@@ -360,9 +360,9 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     
     parser.add_argument('--experiment_name', 
-                              type=str, 
-                              help='Choose a name for the experiment',
-                              default='degli80_02') 
+                        type=str, 
+                        help='Choose a name for the experiment',
+                        default='degli80_02') 
     
     parser.add_argument('--model', 
                         type=str, 
