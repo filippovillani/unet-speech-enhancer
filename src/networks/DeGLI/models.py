@@ -31,6 +31,7 @@ class DeGLIBlock(nn.Module):
     def forward(self, x_hat_stft, x_stft_mag):
         
         x_amp_proj = self.magnitude_projection(x_hat_stft, x_stft_mag)
+
         x_cons_proj = self._consistency_projection(x_amp_proj)
         
         x_cat = torch.stack([x_hat_stft, x_amp_proj, x_cons_proj], axis=1)
@@ -49,7 +50,7 @@ class DeGLIBlock(nn.Module):
         return x_amp_proj
     
     def _consistency_projection(self, x_amp_proj):
-
+            
         x_cons_proj = torch.istft(x_amp_proj, 
                                   n_fft = self.hprms.n_fft,
                                   window = torch.hann_window(self.hprms.n_fft).to(x_amp_proj.device)) # G+ x
@@ -57,7 +58,7 @@ class DeGLIBlock(nn.Module):
                                  n_fft = self.hprms.n_fft,
                                  window = torch.hann_window(self.hprms.n_fft).to(x_cons_proj.device), 
                                  return_complex = True) # G G+ x 
-       
+            
         return x_cons_proj
 
 class AIGCCNN(nn.Module):

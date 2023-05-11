@@ -6,7 +6,6 @@ from evaluate import Tester
 from predict import predict
 from dataset import build_dataloaders
 
-# TODO: change everything
     
 def main(args):
 
