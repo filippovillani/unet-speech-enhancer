@@ -1,8 +1,0 @@
-{
-    "python.autoComplete.extraPaths": [
-        "d:\\GitHub_Portfolio\\UNet_SpeechEnhancer\\src"
-    ],
-    "python.analysis.extraPaths": [
-        "d:\\GitHub_Portfolio\\UNet_SpeechEnhancer\\src"
-    ]
-}
